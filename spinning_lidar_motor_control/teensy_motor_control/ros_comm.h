@@ -4,6 +4,7 @@
 
 /************************       Constants       ************************/
 const int BAUD_RATE = 57600;
+const char* SENSOR_FRAME = "/odom";
 
 
 /************************       Variables       ************************/
@@ -11,6 +12,7 @@ const int BAUD_RATE = 57600;
 ros::NodeHandle nh;
 spinning_lidar_motor_control::MotorState motor_state_msg;
 ros::Publisher motor_state_pub("spinning_lidar/motor_state", &motor_state_msg);
+bool motor_stopped = true;
 
 
 void ros_setup()
@@ -18,14 +20,14 @@ void ros_setup()
     nh.getHardware()->setBaud(BAUD_RATE);
     nh.initNode();
     nh.advertise(motor_state_pub);
-    motor_state_msg.header.frame_id = "/odom";
+    motor_state_msg.header.frame_id = SENSOR_FRAME;
 
     delay(20);
 }
 
 
 // Serial print messages:
-inline void publish_motor_state(bool stopped, float angle, float velocity)
+inline void publish_motor_state(bool stopped, double angle, double velocity)
 {
     motor_state_msg.header.stamp = nh.now();
     motor_state_msg.stopped = stopped;

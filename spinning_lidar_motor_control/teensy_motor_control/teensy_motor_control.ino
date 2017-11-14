@@ -4,8 +4,6 @@
 #include "ros_comm.h"
 
 
-bool motor_stopped = true;
-
 const int MAIN_LOOP_FREQ = 40;
 const double MAIN_LOOP_DELAY = 1000000.0/MAIN_LOOP_FREQ;
 
@@ -20,7 +18,12 @@ void setup()
 void loop() 
 {
     int time_now = micros();
-    publish_motor_state(motor_stopped, 0, 0);
+    if(motor_stopped)
+    {
+        desired_velocity = 0.0;
+    }
+    control_motor();
+    publish_motor_state(motor_stopped, prev_angle, velocity);
     delay((MAIN_LOOP_DELAY - (micros() - time_now))/1000);
 }
 
