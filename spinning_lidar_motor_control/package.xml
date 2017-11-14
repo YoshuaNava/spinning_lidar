@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+	<name>spinning_lidar_motor_control</name>
+	<version>0.0.0</version>
+	<description>The spinning_lidar_motor_control package</description>
+
+	<maintainer email="yoshua@kth.se">Yoshua Nava</maintainer>
+	<author email="yoshua@kth.se">Yoshua Nava</author>
+	<author email="khudur@kth.se">Alan Khudur</author>
+	<license>TODO</license>
+
+	<buildtool_depend>catkin</buildtool_depend>
+	<build_depend>message_generation</build_depend>
+	<exec_depend>message_runtime</exec_depend>
+
+	
+</package>
