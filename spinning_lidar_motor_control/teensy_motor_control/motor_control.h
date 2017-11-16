@@ -27,14 +27,14 @@ const double kd = 0.0;
 
 /************************       Variables       ************************/
 // Velocity control PID
-double desired_velocity = M_PI;
+double desired_vel = M_PI;
 double prev_angle = 0.0;
 int prev_time = 0;
 int PWM_value = 48950; //49500;
-double velocity = 0.0;
+double vel = 0.0;
 double diff_time = 0.0;
 double prev_err = 0.0;
-double current_err = 0.0;
+double curr_err = 0.0;
 double diff_err = 0.0;
 double sum_err = 0.0;
 double PID_value = 0.0;
@@ -51,59 +51,64 @@ double encoder_offset_array[ENCODER_OFFSET_ARRAY_SIZE];
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
 
+// Motor on/off
+bool motor_stopped = false;
 
 
 
 void interrupt_IR_sensor()
 {
-    int time_now = micros();
-    if (i < LOOPS_FOR_INIT) 
+    if(!motor_stopped)
     {
-        if (i == 0) 
+        int time_now = micros();
+        if (i < LOOPS_FOR_INIT) 
         {
-            prev_time_cycle = micros();
-        }
-        else
-        {
-            if (i == 1) 
+            if (i == 0) 
             {
-                time_per_cycle = time_now - prev_time_cycle;
+                prev_time_cycle = micros();
             }
-            else 
+            else
             {
-                time_per_cycle = (time_per_cycle + (time_now - prev_time_cycle))/2;
-            }
-            prev_time_cycle = time_now;
-        }
-        i++;
-    }
-    else 
-    {
-        // Issue lies here:
-        if (j < LOOPS_FOR_ESTIMATION) 
-        {
-            if ((time_now - prev_time_cycle) > time_per_cycle/2) 
-            {
-                encoder_offset_array[j] = fmod(motor_encoder.read(), ENCODER_COUNTS_PER_ROTATION);
-                j++;
-
-                double sum_of_array = 0.0;
-                for (int k = 0; k < j; k++) 
+                if (i == 1) 
                 {
-                    sum_of_array += encoder_offset_array[k];
+                    time_per_cycle = time_now - prev_time_cycle;
                 }
-                encoder_offset = double(sum_of_array) / double(j);
-
-                if (j == ENCODER_OFFSET_ARRAY_SIZE) 
+                else 
                 {
-                    j = 0;  // restart
+                    time_per_cycle = (time_per_cycle + (time_now - prev_time_cycle))/2;
                 }
+                prev_time_cycle = time_now;
             }
-            prev_time_cycle = time_now;
+            i++;
         }
         else 
         {
-            // do nothing
+            // Issue lies here:
+            if (j < LOOPS_FOR_ESTIMATION) 
+            {
+                if ((time_now - prev_time_cycle) > time_per_cycle/2) 
+                {
+                    encoder_offset_array[j] = fmod(motor_encoder.read(), ENCODER_COUNTS_PER_ROTATION);
+                    j++;
+    
+                    double sum_of_array = 0.0;
+                    for (int k = 0; k < j; k++) 
+                    {
+                        sum_of_array += encoder_offset_array[k];
+                    }
+                    encoder_offset = double(sum_of_array) / double(j);
+    
+                    if (j == ENCODER_OFFSET_ARRAY_SIZE) 
+                    {
+                        j = 0;  // restart
+                    }
+                }
+                prev_time_cycle = time_now;
+            }
+            else 
+            {
+                // do nothing
+            }
         }
     }
 }
@@ -112,51 +117,52 @@ void interrupt_IR_sensor()
 // Procedure to estimate the current velocity of the motor
 void estimate_velocity() 
 {
-    int current_time = micros();
-    double current_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
-    diff_time = (current_time - prev_time)/1000000.0;
-    if (abs(current_angle - prev_angle) < 1e-9) 
+    int curr_time = micros();
+    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
+    diff_time = (curr_time - prev_time)/1000000.0;
+    if (abs(curr_angle - prev_angle) < 1e-9) 
     {
-        velocity = 0.0;
+        vel = 0.0;
     }
     else
     {
-        if (current_angle > prev_angle)
+        if (curr_angle > prev_angle)
         {
-            velocity = (current_angle - prev_angle)/diff_time;
+            vel = (curr_angle - prev_angle)/diff_time;
         }
         else 
         {
-            velocity = (2*PI + current_angle - prev_angle)/diff_time;
+            vel = (2*PI + curr_angle - prev_angle)/diff_time;
         }
     }
 
-    prev_angle = current_angle;
-    prev_time = current_time;
+    prev_angle = curr_angle;
+    prev_time = curr_time;
 }
 
 // PID Controller
 void compute_PID()
 {
-    current_err = desired_velocity - velocity;
-    sum_err = sum_err + (current_err * diff_time);
-    diff_err = (current_err - prev_err)/diff_time;
-    prev_err = current_err;
-    PID_value = kp*current_err + ki*sum_err + kd*diff_err;
+    curr_err = desired_vel - vel;
+    sum_err = sum_err + (curr_err * diff_time);
+    diff_err = (curr_err - prev_err)/diff_time;
+    prev_err = curr_err;
+    PID_value = kp*curr_err + ki*sum_err + kd*diff_err;
 }
 
-
-void new_turn()
-{
-    
-}
 
 void control_motor()
 {
-    estimate_velocity();
     compute_PID();
     PWM_value = constrain(PWM_value + (int)PID_value, 48000, 65500);
     analogWrite(MOTOR_PWM_PIN, PWM_value);
+}
+
+
+void stop_motor()
+{
+    estimate_velocity();
+    analogWrite(MOTOR_PWM_PIN, 48000);
 }
 
 void motor_setup()

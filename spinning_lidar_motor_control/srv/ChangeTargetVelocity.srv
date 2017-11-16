@@ -1,0 +1,4 @@
+bool stopped
+float32 rot_vel
+---
+bool success
