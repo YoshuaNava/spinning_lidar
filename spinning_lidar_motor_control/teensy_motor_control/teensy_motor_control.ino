@@ -3,9 +3,11 @@
 #include "motor_control.h"
 #include "ros_comm.h"
 
-
+/************************       Constants       ************************/
 const int MAIN_LOOP_FREQ = 40;
 const double MAIN_LOOP_DELAY = 1000000.0/MAIN_LOOP_FREQ;
+
+
 
 // Setup:
 void setup() 
@@ -32,7 +34,7 @@ void loop()
     {
         desired_vel = received_desired_vel;
     }
-    publish_motor_state(motor_stopped, prev_angle, vel);
+    publish_motor_state(motor_stopped, encoder_offset, vel);
     nh.spinOnce();
     delay((MAIN_LOOP_DELAY - (micros() - time_now))/1000);
 }

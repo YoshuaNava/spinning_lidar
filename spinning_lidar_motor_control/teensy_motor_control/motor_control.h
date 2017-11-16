@@ -2,8 +2,9 @@
 #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <Encoder.h>
 
-/************************       Constants       ************************/
 
+
+/************************       Constants       ************************/
 const byte PWM_RESOLUTION = 16;
 
 // Pins for the quadrature encoder, IR sensor and motor PWM signal
@@ -25,6 +26,8 @@ const double ki = 2.0;
 const double kd = 0.0;
 
 
+
+
 /************************       Variables       ************************/
 // Velocity control PID
 double desired_vel = M_PI;
@@ -39,7 +42,6 @@ double diff_err = 0.0;
 double sum_err = 0.0;
 double PID_value = 0.0;
 
-
 // Encoder
 int i = 0;
 int j = 0;
@@ -50,12 +52,13 @@ double encoder_offset_sum = 0.0;
 double encoder_offset_array[ENCODER_OFFSET_ARRAY_SIZE];
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
-
 // Motor on/off
 bool motor_stopped = false;
 
 
 
+
+// This interrupt estimates the encoder offset, and estimates its current position and velocity
 void interrupt_IR_sensor()
 {
     if(!motor_stopped)
@@ -118,8 +121,9 @@ void interrupt_IR_sensor()
 void estimate_velocity() 
 {
     int curr_time = micros();
-    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
-    diff_time = (curr_time - prev_time)/1000000.0;
+//    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
+    double curr_angle = fmod(2*PI*(motor_encoder.read()) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
+    diff_time = (curr_time - prev_time) / 1000000.0;
     if (abs(curr_angle - prev_angle) < 1e-9) 
     {
         vel = 0.0;
@@ -140,6 +144,8 @@ void estimate_velocity()
     prev_time = curr_time;
 }
 
+
+
 // PID Controller
 void compute_PID()
 {
@@ -151,6 +157,7 @@ void compute_PID()
 }
 
 
+// This procedure runs the PID controller and sends motion command to the motors
 void control_motor()
 {
     compute_PID();
@@ -159,15 +166,18 @@ void control_motor()
 }
 
 
+// Just set the Motor PWM to the minimum to stop it
 void stop_motor()
 {
     estimate_velocity();
     analogWrite(MOTOR_PWM_PIN, 48000);
 }
 
+
+// This procedure configures the Teensy pins for controlling the motors and reading the encoders
 void motor_setup()
 {
     pinMode(IR_SENSOR_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
+//    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
     analogWriteResolution(PWM_RESOLUTION);  // max; forward PWM value: 48950-65500 (slow-fast)
 }
