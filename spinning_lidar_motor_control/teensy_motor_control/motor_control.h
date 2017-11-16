@@ -53,7 +53,7 @@ double encoder_offset_array[ENCODER_OFFSET_ARRAY_SIZE];
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
 // Motor on/off
-bool motor_stopped = false;
+bool motor_stopped = true;
 
 
 

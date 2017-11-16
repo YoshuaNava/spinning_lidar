@@ -20,7 +20,13 @@ void setup()
 void loop() 
 {
     int time_now = micros();
+    
     estimate_velocity();
+    
+    if(received_desired_vel != desired_vel)
+    {
+        desired_vel = received_desired_vel;
+    }
     if(motor_stopped)
     {
         stop_motor();
@@ -30,11 +36,8 @@ void loop()
         control_motor();
     }
 
-    if(received_desired_vel != desired_vel)
-    {
-        desired_vel = received_desired_vel;
-    }
-    publish_motor_state(motor_stopped, encoder_offset, vel);
+    publish_motor_state(motor_stopped, prev_angle, vel);
+    
     nh.spinOnce();
     delay((MAIN_LOOP_DELAY - (micros() - time_now))/1000);
 }
