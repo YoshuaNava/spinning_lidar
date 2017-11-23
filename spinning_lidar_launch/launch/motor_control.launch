@@ -1,4 +1,7 @@
 <?xml version="1.0"?>
 <launch> 
-    <node name="teensy_serial_node" pkg="spinning_lidar_motor_control" type="serial_node.py"/>
+    <node name="teensy_serial_node" pkg="spinning_lidar_motor_control" type="serial_node.py">
+		<param name="port" value="/dev/ttyACM0"/>
+		<param name="baud" value="57600"/>
+    </node>
 </launch>

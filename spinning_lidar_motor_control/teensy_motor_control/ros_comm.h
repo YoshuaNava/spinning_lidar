@@ -13,7 +13,7 @@ using spinning_lidar_motor_control::ChangeTargetVelocity;
 
 /************************       Constants       ************************/
 const int BAUD_RATE = 57600;
-const char* SENSOR_FRAME = "/odom";
+const char* SENSOR_FRAME = "/laser";
 
 
 
