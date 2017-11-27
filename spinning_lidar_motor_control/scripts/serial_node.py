@@ -54,8 +54,11 @@ if __name__=="__main__":
     baud = int(rospy.get_param('~baud','57600'))
 
     rospy.loginfo("Connecting to %s at %d baud" % (port_name,baud) )
+
     client = SerialClient(port_name, baud)
+
     try:
+        rospy.loginfo("Serial client set. ROS topics and services from the motor controller are now accesible.")
         client.run()
     except KeyboardInterrupt:
         pass

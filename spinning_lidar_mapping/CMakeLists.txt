@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(spinning_lidar_2d_mapping)
+project(spinning_lidar_mapping)
 
 add_compile_options(-std=c++11)
 set(CMAKE_BUILD_TYPE Release)
@@ -14,10 +14,10 @@ find_package(catkin REQUIRED COMPONENTS
     tf
 )
 
-find_package(Eigen3)
+find_package(Eigen3 REQUIRED)
 
 catkin_package(
-    DEPENDS eigen
+    DEPENDS EIGEN3
     INCLUDE_DIRS include
     CATKIN_DEPENDS cmake_modules laser_geometry message_filters roscpp sensor_msgs std_msgs tf
 )
@@ -29,5 +29,5 @@ include_directories(
 )
 
 
-add_executable(test_pcl_gen test/test_pcl_gen.cpp)
-target_link_libraries(test_pcl_gen ${catkin_LIBRARIES})
+add_executable(test_2d_cloud_gen_laserpipeline test/test_2d_cloud_gen_laserpipeline.cpp)
+target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
