@@ -43,5 +43,5 @@ include_directories(
 )
 
 
-add_executable(lidar_tf_publisher src/lidar_tf_publisher.cpp)
-target_link_libraries(lidar_tf_publisher ${catkin_LIBRARIES})
+add_executable(lidar_jointstates_publisher src/lidar_jointstates_publisher.cpp)
+target_link_libraries(lidar_jointstates_publisher ${catkin_LIBRARIES})
