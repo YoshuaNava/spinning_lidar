@@ -2,8 +2,8 @@
 <launch>    
     <node name="lidar_tf_publisher_node" pkg="spinning_lidar_motor_control" type="lidar_tf_publisher" output="screen">
 		<param name="motor_state_topic" value="/spinning_lidar/motor_state"/>
-		<param name="lidar_platform_link" value="laser_platform"/>
-		<param name="lidar_link" value="laser"/>
+		<param name="lidar_platform_link" value="laser_mount"/>
+		<param name="lidar_axis_link" value="laser_axis"/>
 		<param name="startup_delay" value="0"/>
     </node>
 </launch>

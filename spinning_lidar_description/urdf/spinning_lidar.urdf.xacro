@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<robot name="spinning_hokuyo_utm30lx" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  
+    <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_lidar_mount.urdf.xacro" />
+
+    <link name="world"/>
+
+    <xacro:rotating_lidar_mount_macro parent="world" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser">
+        <origin xyz="0 0 0.075" rpy="0 0 0" />
+    </xacro:rotating_lidar_mount_macro>
+
+</robot>
