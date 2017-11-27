@@ -95,8 +95,12 @@ int main(int argc, char** argv)
 	// std::string laser_link = "base_laser_link";
 
 	// Parameters for the Clearpath Ridgeback robot
-	std::string laser_scan_topic = "front/scan";
-	std::string laser_link = "front_laser";
+	// std::string laser_scan_topic = "front/scan";
+	// std::string laser_link = "front_laser";
+
+	// Parameters for the spinning lidar
+	std::string laser_scan_topic = "spinning_lidar/scan";
+	std::string laser_link = "laser";
 
 	std::string point_cloud_topic = "my_point_cloud";
 	bool use_tf = true;

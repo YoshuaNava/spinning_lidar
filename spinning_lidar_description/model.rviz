@@ -6,11 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /RobotModel1
-        - /RobotModel1/Status1
         - /RobotModel1/Links1
-        - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
       Splitter Ratio: 0.559065938
     Tree Height: 720
@@ -32,7 +28,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: LaserScan
 Visualization Manager:
   Class: ""
   Displays:
@@ -108,12 +104,11 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        laser_axis:
-          laser:
-            {}
         world:
           laser_mount:
-            {}
+            laser_axis:
+              laser:
+                {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -126,7 +121,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/LaserScan
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: Intensity
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -135,13 +130,13 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: LaserScan
-      Position Transformer: ""
+      Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
       Size (Pixels): 3
       Size (m): 0.00999999978
       Style: Flat Squares
-      Topic: ""
+      Topic: /spinning_lidar/scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -170,7 +165,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.93795693
+      Distance: 3.17641854
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
@@ -185,10 +180,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.260397881
+      Pitch: 0.35499987
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.12175417
+      Yaw: 3.14177084
     Saved: ~
 Window Geometry:
   Displays:
