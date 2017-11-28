@@ -61,59 +61,8 @@ bool motor_stopped = true;
 // This interrupt estimates the encoder offset, and estimates its current position and velocity
 void interrupt_IR_sensor()
 {
-    if(!motor_stopped)
-    {
-        int time_now = micros();
-        if (i < LOOPS_FOR_INIT) 
-        {
-            if (i == 0) 
-            {
-                prev_time_cycle = micros();
-            }
-            else
-            {
-                if (i == 1) 
-                {
-                    time_per_cycle = time_now - prev_time_cycle;
-                }
-                else 
-                {
-                    time_per_cycle = (time_per_cycle + (time_now - prev_time_cycle))/2;
-                }
-                prev_time_cycle = time_now;
-            }
-            i++;
-        }
-        else 
-        {
-            // Issue lies here:
-            if (j < LOOPS_FOR_ESTIMATION) 
-            {
-                if ((time_now - prev_time_cycle) > time_per_cycle/2) 
-                {
-                    encoder_offset_array[j] = fmod(motor_encoder.read(), ENCODER_COUNTS_PER_ROTATION);
-                    j++;
-    
-                    double sum_of_array = 0.0;
-                    for (int k = 0; k < j; k++) 
-                    {
-                        sum_of_array += encoder_offset_array[k];
-                    }
-                    encoder_offset = double(sum_of_array) / double(j);
-    
-                    if (j == ENCODER_OFFSET_ARRAY_SIZE) 
-                    {
-                        j = 0;  // restart
-                    }
-                }
-                prev_time_cycle = time_now;
-            }
-            else 
-            {
-                // do nothing
-            }
-        }
-    }
+    motor_encoder.write(0);
+    encoder_offset = motor_encoder.read();
 }
 
 
@@ -122,7 +71,7 @@ void estimate_velocity()
 {
     int curr_time = micros();
 //    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
-    double curr_angle = fmod(2*PI*(motor_encoder.read()) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
+    double curr_angle = fmod(2.0*PI*(motor_encoder.read()) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
     diff_time = (curr_time - prev_time) / 1000000.0;
     if (abs(curr_angle - prev_angle) < 1e-9) 
     {
@@ -178,6 +127,6 @@ void stop_motor()
 void motor_setup()
 {
     pinMode(IR_SENSOR_PIN, INPUT_PULLUP);
-//    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
+    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
     analogWriteResolution(PWM_RESOLUTION);  // max; forward PWM value: 48950-65500 (slow-fast)
 }
