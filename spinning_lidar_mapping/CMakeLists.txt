@@ -35,3 +35,6 @@ target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
 
 add_executable(test_assemblers_laserpipeline test/test_assemblers_laserpipeline.cpp)
 target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})
+
+add_executable(test_continuous_assemblers_laserpipeline test/test_continuous_assemblers_laserpipeline.cpp)
+target_link_libraries(test_continuous_assemblers_laserpipeline ${catkin_LIBRARIES})

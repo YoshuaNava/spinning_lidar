@@ -1,9 +1,11 @@
 
 #include <ros.h>
+#include <std_msgs/Empty.h>
 #include <spinning_lidar_motor_control/MotorState.h>
 #include <spinning_lidar_motor_control/TurnMotorOnOff.h>
 #include <spinning_lidar_motor_control/ChangeTargetVelocity.h>
 
+using std_msgs::Empty;
 using spinning_lidar_motor_control::MotorState;
 using spinning_lidar_motor_control::TurnMotorOnOff;
 using spinning_lidar_motor_control::ChangeTargetVelocity;
@@ -22,7 +24,9 @@ const char* SENSOR_FRAME = "/laser_axis";
 // ROS node handler, publisher and services
 ros::NodeHandle nh;
 MotorState motor_state_msg;
+Empty empty_msg;
 ros::Publisher motor_state_pub("spinning_lidar/motor_state", &motor_state_msg);
+ros::Publisher ir_interrupt_pub("spinning_lidar/ir_interrupt", &empty_msg);
 
 void motor_onoff_cb(const TurnMotorOnOff::Request &req, TurnMotorOnOff::Response &reply)
 {
@@ -50,6 +54,7 @@ void ros_setup()
     nh.getHardware()->setBaud(BAUD_RATE);
     nh.initNode();
     nh.advertise(motor_state_pub);
+    nh.advertise(ir_interrupt_pub);
     nh.advertiseService(motor_onoff_server);
     nh.advertiseService(change_vel_server);
     motor_state_msg.header.frame_id = SENSOR_FRAME;
@@ -59,6 +64,11 @@ void ros_setup()
     delay(20);
 }
 
+
+inline void publish_ir_interrupt()
+{
+    ir_interrupt_pub.publish(&empty_msg);
+}
 
 
 inline void publish_motor_state(bool stopped, double angle, double vel)
@@ -70,3 +80,6 @@ inline void publish_motor_state(bool stopped, double angle, double vel)
     motor_state_msg.des_vel = desired_vel;
     motor_state_pub.publish(&motor_state_msg);
 }
+
+
+

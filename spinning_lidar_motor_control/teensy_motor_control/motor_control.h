@@ -14,10 +14,6 @@ const byte IR_SENSOR_PIN = 7;
 const byte MOTOR_PWM_PIN = 9;
 
 // Encoder offset estimation
-const int LOOPS_FOR_INIT = 10;
-const int LOOPS_FOR_ESTIMATION = 50;
-const int LOOPS_FOR_DRIFT_REESTIMATION = 1000;
-const int ENCODER_OFFSET_ARRAY_SIZE = 20;
 const double ENCODER_COUNTS_PER_ROTATION = 229376.0;
 
 // Velocity control PID
@@ -48,22 +44,11 @@ int j = 0;
 int time_per_cycle = 0;
 int prev_time_cycle = 0;
 double encoder_offset = 0.0;
-double encoder_offset_sum = 0.0;
-double encoder_offset_array[ENCODER_OFFSET_ARRAY_SIZE];
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
 // Motor on/off
 bool motor_stopped = true;
 
-
-
-
-// This interrupt estimates the encoder offset, and estimates its current position and velocity
-void interrupt_IR_sensor()
-{
-    motor_encoder.write(0);
-    encoder_offset = motor_encoder.read();
-}
 
 
 // Procedure to estimate the current velocity of the motor
@@ -126,7 +111,5 @@ void stop_motor()
 // This procedure configures the Teensy pins for controlling the motors and reading the encoders
 void motor_setup()
 {
-    pinMode(IR_SENSOR_PIN, INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
     analogWriteResolution(PWM_RESOLUTION);  // max; forward PWM value: 48950-65500 (slow-fast)
 }

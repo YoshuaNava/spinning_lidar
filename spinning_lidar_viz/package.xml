@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>spinning_lidar_description</name>
+  <name>spinning_lidar_viz</name>
   <version>0.0.0</version>
-  <description>URDF robot description for custom spinning LIDAR sensor built at KTH.</description>
+  <description>Visualization for custom spinning LIDAR sensor built at KTH.</description>
 
   <maintainer email="yoshua@kth.se">Yoshua Nava</maintainer>
 
@@ -10,6 +10,7 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roslaunch</build_depend>
+  <run_depend>robot_state_publisher</run_depend>
   <run_depend>urdf</run_depend>
   <run_depend>xacro</run_depend>
 

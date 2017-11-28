@@ -9,11 +9,28 @@ const double MAIN_LOOP_DELAY = 1000000.0/MAIN_LOOP_FREQ;
 
 
 
+// This interrupt estimates the encoder offset, and estimates its current position and velocity
+void interrupt_IR_sensor()
+{
+    motor_encoder.write(0);
+    encoder_offset = motor_encoder.read();
+    publish_ir_interrupt();
+}
+
+
+void IR_interrupt_setup()
+{
+    pinMode(IR_SENSOR_PIN, INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(IR_SENSOR_PIN), interrupt_IR_sensor, RISING);
+}
+
+
 // Setup:
 void setup() 
 {
     ros_setup();
     motor_setup();
+    IR_interrupt_setup();
 }
 
 // Loop:

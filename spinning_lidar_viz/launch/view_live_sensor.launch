@@ -7,12 +7,14 @@
 
 	<node name="lidar_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
         <rosparam param="source_list">["/spinning_lidar/joint_states"]</rosparam>
+        <param name="use_gui" value="false"/>
     </node>
+    
     <node name="lidar_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
         <param name="use_tf_static" value="false"/>
     </node>
 
 	<param name="use_gui" value="true" />
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_description)/model.rviz" />
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_viz)/rviz/live_sensor.rviz" />
 
 </launch>
