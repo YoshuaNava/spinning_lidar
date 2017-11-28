@@ -6,6 +6,7 @@ set(CMAKE_BUILD_TYPE Release)
 
 find_package(catkin REQUIRED COMPONENTS
     cmake_modules
+    laser_assembler
     laser_geometry
     message_filters
     roscpp
@@ -19,7 +20,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
     DEPENDS EIGEN3
     INCLUDE_DIRS include
-    CATKIN_DEPENDS cmake_modules laser_geometry message_filters roscpp sensor_msgs std_msgs tf
+    CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters roscpp sensor_msgs std_msgs tf
 )
 
 include_directories(
@@ -31,3 +32,6 @@ include_directories(
 
 add_executable(test_2d_cloud_gen_laserpipeline test/test_2d_cloud_gen_laserpipeline.cpp)
 target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
+
+add_executable(test_assemblers_laserpipeline test/test_assemblers_laserpipeline.cpp)
+target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})

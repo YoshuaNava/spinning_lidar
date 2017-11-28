@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch> 
+
+
+    <node name="laser_assembler_node" pkg="laser_assembler" type="laser_scan_assembler">
+        <remap from="scan" to="/spinning_lidar/scan"/>
+        <param name="max_scans" type="int" value="400" />
+        <param name="fixed_frame" type="string" value="laser_mount" />
+    </node>
+
+
+<!--     <node name="test_2d_cloud_gen_node" pkg="spinning_lidar_mapping" type="test_2d_cloud_gen_laserpipeline" output="screen" />
+
+
+    <node name="point_cloud_assembler_node" pkg="laser_assembler" type="point_cloud_assembler">
+        <remap from="cloud" to="/spinning_lidar/2d_cloud"/>
+        <param name="max_clouds" type="int" value="400" />
+        <param name="fixed_frame" type="string" value="base_link" />
+    </node>
+ -->
+
+
+</launch>

@@ -1,9 +1,9 @@
-#include "ros/ros.h"
-#include "tf/transform_listener.h"
-#include "sensor_msgs/PointCloud.h"
-#include "tf/message_filter.h"
-#include "message_filters/subscriber.h"
-#include "laser_geometry/laser_geometry.h"
+#include <ros/ros.h>
+#include <tf/transform_listener.h>
+#include <sensor_msgs/PointCloud.h>
+#include <tf/message_filter.h>
+#include <message_filters/subscriber.h>
+#include <laser_geometry/laser_geometry.h>
 
 
 class LaserToPointCloud
@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 	std::string laser_scan_topic = "spinning_lidar/scan";
 	std::string laser_link = "laser";
 
-	std::string point_cloud_topic = "my_point_cloud";
+	std::string point_cloud_topic = "spinning_lidar/2d_cloud";
 	bool use_tf = true;
 
 	LaserToPointCloud* laser_pcl_converter;
