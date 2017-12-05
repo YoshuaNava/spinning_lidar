@@ -12,8 +12,9 @@ const double MAIN_LOOP_DELAY = 1000000.0/MAIN_LOOP_FREQ;
 // This interrupt estimates the encoder offset, and estimates its current position and velocity
 void interrupt_IR_sensor()
 {
-    motor_encoder.write(0);
     encoder_offset = motor_encoder.read();
+    angle_offset = fmod(2.0*PI*(encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
+    //motor_encoder.write(0);
     publish_ir_interrupt();
 }
 
@@ -54,7 +55,7 @@ void loop()
         control_motor();
     }
 
-    publish_motor_state(motor_stopped, prev_angle, vel);
+    publish_motor_state(motor_stopped, prev_angle-angle_offset, vel);
     
     nh.spinOnce();
     delay((MAIN_LOOP_DELAY - (micros() - time_now))/1000);

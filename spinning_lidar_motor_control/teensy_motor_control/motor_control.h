@@ -6,6 +6,8 @@
 
 /************************       Constants       ************************/
 const byte PWM_RESOLUTION = 16;
+const long MIN_PWM = 48000;
+const long MAX_PWM = 65500;
 
 // Pins for the quadrature encoder, IR sensor and motor PWM signal
 const byte PIN_QUAD_ENC_A = 2;
@@ -28,8 +30,9 @@ const double kd = 0.0;
 // Velocity control PID
 double desired_vel = M_PI;
 double prev_angle = 0.0;
-int prev_time = 0;
-int PWM_value = 48950; //49500;
+double angle_offset = 0.0;
+long prev_time = 0;
+long PWM_value = 48950; //49500;
 double vel = 0.0;
 double diff_time = 0.0;
 double prev_err = 0.0;
@@ -41,8 +44,8 @@ double PID_value = 0.0;
 // Encoder
 int i = 0;
 int j = 0;
-int time_per_cycle = 0;
-int prev_time_cycle = 0;
+long time_per_cycle = 0;
+long prev_time_cycle = 0;
 double encoder_offset = 0.0;
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
@@ -55,7 +58,7 @@ bool motor_stopped = true;
 void estimate_velocity() 
 {
     int curr_time = micros();
-//    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2*PI);
+//    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
     double curr_angle = fmod(2.0*PI*(motor_encoder.read()) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
     diff_time = (curr_time - prev_time) / 1000000.0;
     if (abs(curr_angle - prev_angle) < 1e-9) 
@@ -95,7 +98,7 @@ void compute_PID()
 void control_motor()
 {
     compute_PID();
-    PWM_value = constrain(PWM_value + (int)PID_value, 48000, 65500);
+    PWM_value = constrain(PWM_value + (int)PID_value, MIN_PWM, MAX_PWM);
     analogWrite(MOTOR_PWM_PIN, PWM_value);
 }
 
@@ -103,8 +106,7 @@ void control_motor()
 // Just set the Motor PWM to the minimum to stop it
 void stop_motor()
 {
-    estimate_velocity();
-    analogWrite(MOTOR_PWM_PIN, 48000);
+    analogWrite(MOTOR_PWM_PIN, MIN_PWM);
 }
 
 

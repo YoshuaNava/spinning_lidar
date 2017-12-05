@@ -10,14 +10,18 @@
 ros::ServiceClient assemble_client;
 laser_assembler::AssembleScans2 assemble_srv;
 ros::Publisher point_cloud_pub;
+int num_points_thesh = 5000;
 
 void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
 {
 	assemble_srv.request.end = ros::Time::now();
 	if (assemble_client.call(assemble_srv))
 	{
-		point_cloud_pub.publish(assemble_srv.response.cloud);
-		// ROS_INFO("Got cloud with %i points", assemble_srv.response.cloud.points.size());
+		if(assemble_srv.response.cloud.width > num_points_thesh)
+		{
+			point_cloud_pub.publish(assemble_srv.response.cloud);
+			ROS_INFO("Got cloud with %i points", assemble_srv.response.cloud.width);
+		}
 	}
 	else
 	{
