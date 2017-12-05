@@ -108,7 +108,7 @@ void stop_motor()
 }
 
 
-// This procedure configures the Teensy pins for controlling the motors and reading the encoders
+// This procedure configures the Teensy pin for controlling the motor
 void motor_setup()
 {
     analogWriteResolution(PWM_RESOLUTION);  // max; forward PWM value: 48950-65500 (slow-fast)

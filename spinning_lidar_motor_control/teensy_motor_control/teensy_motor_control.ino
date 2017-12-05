@@ -18,6 +18,7 @@ void interrupt_IR_sensor()
 }
 
 
+// Setup pin and callback for IR sensor interrupt
 void IR_interrupt_setup()
 {
     pinMode(IR_SENSOR_PIN, INPUT_PULLUP);
