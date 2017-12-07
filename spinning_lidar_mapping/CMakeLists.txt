@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
     laser_assembler
     laser_geometry
     message_filters
+    pcl_conversions
+    pcl_ros
     roscpp
     sensor_msgs
     std_msgs
@@ -16,9 +18,10 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
 
 catkin_package(
-    DEPENDS EIGEN3
+    DEPENDS EIGEN3 PCL
     INCLUDE_DIRS include
     CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters roscpp sensor_msgs std_msgs tf
 )
@@ -27,6 +30,7 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
 )
 
 
@@ -38,3 +42,6 @@ target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})
 
 add_executable(test_continuous_assemblers_laserpipeline test/test_continuous_assemblers_laserpipeline.cpp)
 target_link_libraries(test_continuous_assemblers_laserpipeline ${catkin_LIBRARIES})
+
+add_executable(test_pcl_ros test/test_pcl_ros.cpp)
+target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})

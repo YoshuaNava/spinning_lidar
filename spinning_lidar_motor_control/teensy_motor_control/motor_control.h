@@ -20,7 +20,7 @@ const double ENCODER_COUNTS_PER_ROTATION = 229376.0;
 
 // Velocity control PID
 const double kp = 4.0;
-const double ki = 0.1;
+const double ki = 0.0;
 const double kd = 0.0;
 
 
@@ -28,7 +28,7 @@ const double kd = 0.0;
 
 /************************       Variables       ************************/
 // Velocity control PID
-double desired_vel = M_PI;
+double desired_vel = M_PI*3/4;
 double prev_angle = 0.0;
 double angle_offset = 0.0;
 long prev_time = 0;
@@ -98,8 +98,11 @@ void compute_PID()
 void control_motor()
 {
     compute_PID();
-    PWM_value = constrain(PWM_value + (int)PID_value, MIN_PWM, MAX_PWM);
-    analogWrite(MOTOR_PWM_PIN, PWM_value);
+    if(PID_value > -500)
+    {
+        PWM_value = constrain(PWM_value + (int)PID_value, MIN_PWM, MAX_PWM);
+        analogWrite(MOTOR_PWM_PIN, PWM_value);
+    }
 }
 
 
