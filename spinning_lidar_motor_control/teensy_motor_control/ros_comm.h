@@ -71,12 +71,13 @@ inline void publish_ir_interrupt()
 }
 
 
-inline void publish_motor_state(bool stopped, double angle, double vel)
+inline void publish_motor_state(bool stopped, double curr_angle, double offset_angle, double curr_vel)
 {
     motor_state_msg.header.stamp = nh.now();
     motor_state_msg.stopped = stopped;
-    motor_state_msg.angle = angle; //PWM_value;
-    motor_state_msg.curr_vel = vel;
+    motor_state_msg.curr_angle = curr_angle;
+    motor_state_msg.offset_angle = offset_angle;
+    motor_state_msg.curr_vel = curr_vel;
     motor_state_msg.des_vel = desired_vel;
     motor_state_pub.publish(&motor_state_msg);
 }

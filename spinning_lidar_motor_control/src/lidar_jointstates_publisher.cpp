@@ -14,7 +14,7 @@ ros::Publisher spinning_lidar_joint_pub;
 
 void motorStateCallback(const spinning_lidar_motor_control::MotorState::ConstPtr& msg)
 {
-    double angle = -msg->angle;
+    double angle = -msg->curr_angle;
     double vel = -msg->curr_vel;
 
     sensor_msgs::JointState joint_state_msg;

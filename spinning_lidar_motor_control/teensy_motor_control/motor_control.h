@@ -19,8 +19,8 @@ const byte MOTOR_PWM_PIN = 9;
 const double ENCODER_COUNTS_PER_ROTATION = 229376.0;
 
 // Velocity control PID
-const double kp = 5.0;
-const double ki = 2.0;
+const double kp = 4.0;
+const double ki = 0.1;
 const double kd = 0.0;
 
 
@@ -47,6 +47,7 @@ int j = 0;
 long time_per_cycle = 0;
 long prev_time_cycle = 0;
 double encoder_offset = 0.0;
+bool encoder_lock = false;
 Encoder motor_encoder(PIN_QUAD_ENC_A, PIN_QUAD_ENC_B);
 
 // Motor on/off
@@ -58,7 +59,6 @@ bool motor_stopped = true;
 void estimate_velocity() 
 {
     int curr_time = micros();
-//    double curr_angle = fmod(2*PI*(motor_encoder.read() - encoder_offset) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
     double curr_angle = fmod(2.0*PI*(motor_encoder.read()) / ENCODER_COUNTS_PER_ROTATION, 2.0*PI);
     diff_time = (curr_time - prev_time) / 1000000.0;
     if (abs(curr_angle - prev_angle) < 1e-9) 
