@@ -10,7 +10,7 @@
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "test_assemblers_node");
+	ros::init(argc, argv, "test_assembler_laserpipeline");
 	ros::NodeHandle nh;
 
 	std::string point_cloud_topic = "spinning_lidar/assembled_cloud";

@@ -12,7 +12,7 @@
 ros::Publisher filtered_pub, planes_pub;
 
 double voxel_leaf_size = 0.1;
-double plane_dist_thresh = 0.1;
+double plane_dist_thresh = 0.01;
 
 void 
 cloud_cb (const pcl::PCLPointCloud2ConstPtr& input)
@@ -45,7 +45,8 @@ cloud_cb (const pcl::PCLPointCloud2ConstPtr& input)
     pcl::ExtractIndices<pcl::PointXYZ> extract;
     int i = 0, num_points = (int) cloud_ptr->points.size ();
     // While 30% of the original cloud is still there
-    while (cloud_ptr->points.size() > 0.3 * num_points)
+    int num_planes = 5;
+    while ((cloud_ptr->points.size() > 0.3 * num_points) && (i < num_planes))
     {
         // Segment the largest planar component from the remaining cloud
         seg.setInputCloud(cloud_ptr);
@@ -64,13 +65,16 @@ cloud_cb (const pcl::PCLPointCloud2ConstPtr& input)
         std::cerr << "PointCloud representing the planar component: " << (cloud_p->width * cloud_p->height) << " data points." << std::endl;
 
         // Create the filtering object
+        extract.setNegative(true);
         extract.filter (*cloud_f);
         cloud_ptr.swap(cloud_f);
         i++;
-    }
+
+        ros::Duration(1.0).sleep();
         // Publish the planes point cloud
         pcl::toPCLPointCloud2 (*cloud_p, planes_cloud);
         planes_pub.publish(planes_cloud);
+    }
 }
 
 int main (int argc, char** argv)

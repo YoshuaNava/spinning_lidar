@@ -87,7 +87,7 @@ private:
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "test_pcl_gen_node");
+	ros::init(argc, argv, "test_pcl_gen_laserpipeline");
 	ros::NodeHandle nh;
 
 	// Parameters for the PR2 tilting laser dataset

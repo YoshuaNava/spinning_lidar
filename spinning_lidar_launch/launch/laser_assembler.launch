@@ -1,22 +1,23 @@
 <?xml version="1.0"?>
 <launch> 
 
+    <node name="lidar_scan_filtering_node" pkg="spinning_lidar_mapping" type="lidar_scan_filtering" output="screen" >
+        <param name="min_dist_to_sensor" value="5.0" />
+        <param name="laser_link" type="string" value="laser" />
+        <param name="laser_scan_topic" type="string" value="spinning_lidar/scan" />
+        <param name="filtered_scan_topic" type="string" value="spinning_lidar/filtered_scan" />
+    </node>
+
+    <node name="interrupt_laser_assembler_node" pkg="spinning_lidar_mapping" type="interrupt_laser_assembler" output="screen" >
+    	<param name="ir_interrupt_topic" type="string" value="spinning_lidar/ir_interrupt" />
+        <param name="assembled_cloud_topic" type="string" value="spinning_lidar/assembled_cloud" />
+        <param name="assemble_service" type="string" value="assemble_scans2" />
+    </node>
 
     <node name="laser_assembler_node" pkg="laser_assembler" type="laser_scan_assembler">
-        <remap from="scan" to="/spinning_lidar/scan"/>
+        <remap from="scan" to="/spinning_lidar/filtered_scan"/>
         <param name="max_scans" type="int" value="400" />
         <param name="fixed_frame" type="string" value="laser_mount" />
     </node>
-
-    <node name="test_continuous_assemblers_node" pkg="spinning_lidar_mapping" type="test_continuous_assemblers_laserpipeline" output="screen" />
-
-<!--     <node name="test_2d_cloud_gen_node" pkg="spinning_lidar_mapping" type="test_2d_cloud_gen_laserpipeline" output="screen" />
-    <node name="point_cloud_assembler_node" pkg="laser_assembler" type="point_cloud_assembler">
-        <remap from="cloud" to="/spinning_lidar/2d_cloud"/>
-        <param name="max_clouds" type="int" value="400" />
-        <param name="fixed_frame" type="string" value="base_link" />
-    </node>
- -->
-
 
 </launch>
