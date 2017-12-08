@@ -1,3 +1,6 @@
+/***********************************************
+***       Alan Khudur, Yoshua Nava - KTH     ***
+************************************************/
 
 #include <ros.h>
 #include <std_msgs/Empty.h>
@@ -37,11 +40,6 @@ void motor_onoff_cb(const TurnMotorOnOff::Request &req, TurnMotorOnOff::Response
 }
 ros::ServiceServer<TurnMotorOnOff::Request, TurnMotorOnOff::Response> motor_onoff_server("spinning_lidar/turn_motor_onoff",&motor_onoff_cb);
 
-void reset_encoder_cb(const std_srvs::Empty::Request &req, std_srvs::Empty::Response &reply)
-{
-    motor_encoder.write(0);
-}
-ros::ServiceServer<std_srvs::Empty::Request, std_srvs::Empty::Response> reset_encoder_server("spinning_lidar/reset_encoder",&reset_encoder_cb);
 
 double received_desired_vel = 0;
 void vel_change_cb(const ChangeTargetVelocity::Request &req, ChangeTargetVelocity::Response &reply)
@@ -64,7 +62,6 @@ void ros_setup()
     nh.advertise(ir_interrupt_pub);
     nh.advertiseService(motor_onoff_server);
     nh.advertiseService(change_vel_server);
-    nh.advertiseService(reset_encoder_server);
     motor_state_msg.header.frame_id = SENSOR_FRAME;
 
     received_desired_vel = desired_vel;

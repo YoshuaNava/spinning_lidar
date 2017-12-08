@@ -30,8 +30,8 @@ void motorStateCallback(const spinning_lidar_motor_control::MotorState::ConstPtr
 
 int main(int argc, char** argv)
 {
-	ros::init(argc, argv, "lidar_jointstates_publisher_node");
-	ros::NodeHandle nh;
+    ros::init(argc, argv, "lidar_jointstates_publisher_node");
+    ros::NodeHandle nh;
 
     nh.param("motor_state_topic", motor_state_topic, std::string("/spinning_lidar/motor_state"));
     nh.param("lidar_platform_link", lidar_platform_link, std::string("laser_mount"));

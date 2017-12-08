@@ -1,3 +1,6 @@
+/***********************************************
+***       Alan Khudur, Yoshua Nava - KTH     ***
+************************************************/
 
 #include <math.h>
 #include "motor_control.h"
@@ -59,8 +62,7 @@ void loop()
         {
             control_motor();
         }
-        //publish_motor_state(motor_stopped, prev_angle, angle_offset, vel);
-        publish_motor_state(motor_stopped, PWM_value, PID_value, vel);
+        publish_motor_state(motor_stopped, prev_angle, angle_offset, vel);
         nh.spinOnce();
     }
     

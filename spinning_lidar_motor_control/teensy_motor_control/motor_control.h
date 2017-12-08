@@ -1,3 +1,6 @@
+/***********************************************
+***       Alan Khudur, Yoshua Nava - KTH     ***
+************************************************/
 
 #define ENCODER_OPTIMIZE_INTERRUPTS
 #include <Encoder.h>
