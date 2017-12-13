@@ -4,6 +4,8 @@ project(spinning_lidar_mapping)
 add_compile_options(-std=c++11)
 set(CMAKE_BUILD_TYPE Release)
 
+set(BUILD_TESTS TRUE)
+
 find_package(catkin REQUIRED COMPONENTS
     cmake_modules
     laser_assembler
@@ -23,7 +25,7 @@ find_package(PCL REQUIRED)
 catkin_package(
     DEPENDS EIGEN3 PCL
 #    INCLUDE_DIRS include
-    CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters roscpp sensor_msgs std_msgs tf
+    CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters pcl_ros roscpp sensor_msgs std_msgs tf
 )
 
 include_directories(
@@ -41,11 +43,16 @@ add_executable(interrupt_laser_assembler src/interrupt_laser_assembler.cpp)
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 
 
-add_executable(test_2d_cloud_gen_laserpipeline test/test_2d_cloud_gen_laserpipeline.cpp)
-target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
+if(BUILD_TESTS)
+    add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp)
+    target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
 
-add_executable(test_assemblers_laserpipeline test/test_assemblers_laserpipeline.cpp)
-target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})
+    add_executable(test_assemblers_laserpipeline test/laser_pipeline/test_assemblers_laserpipeline.cpp)
+    target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})
 
-add_executable(test_pcl_ros test/test_pcl_ros.cpp)
-target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})
+    add_executable(test_pcl_ros test/test_pcl_ros.cpp)
+    target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})
+
+    add_executable(test_loam_feature_extraction test/loam/test_loam_feature_extraction.cpp)
+    target_link_libraries(test_loam_feature_extraction ${catkin_LIBRARIES})
+endif()
