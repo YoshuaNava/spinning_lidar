@@ -11,7 +11,7 @@
     </node>
     
     <node name="lidar_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
-        <param name="use_tf_static" value="false"/>
+        <param name="use_tf_static" value="true"/>
     </node>
 
 	<param name="use_gui" value="true" />

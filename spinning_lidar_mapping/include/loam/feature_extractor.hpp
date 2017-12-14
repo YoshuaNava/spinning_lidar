@@ -24,11 +24,13 @@ class FeatureExtractorLOAM
 {
 public:
 	ros::NodeHandle nh_;
+	ros::Subscriber ir_interrupt_sub;
 	message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub;
 
-	FeatureExtractorLOAM(ros::NodeHandle nh, std::string laser_scan_topic, std::string laser_link) :
+	FeatureExtractorLOAM(ros::NodeHandle nh, std::string laser_scan_topic, std::string laser_link, std::string base_link) :
+		nh_(nh),
 		laser_sub(nh_, laser_scan_topic, 10),
-		tf_laser_filter(laser_sub, tf_listener, laser_link, 10),
+		tf_laser_filter(laser_sub, tf_listener, base_link, 10),
 		cloud_in_pcl(new pcl::PointCloud<pcl::PointXYZ>()),
 		valid_cloud(new pcl::PointCloud<pcl::PointXYZHSV>()),
 		cloud_features(new pcl::PointCloud<pcl::PointXYZHSV>()),
@@ -39,17 +41,16 @@ public:
 		surf_points_flat(new pcl::PointCloud<pcl::PointXYZHSV>()),
 		surf_points_less_flat(new pcl::PointCloud<pcl::PointXYZHSV>())
 	{
-		nh.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
-		nh.param("tf_filter_tol", tf_filter_tol, 0.01);
-		nh.param("base_link", base_link, std::string("laser_mount"));
-		nh.param("laser_link", laser_link, std::string("laser"));
-		nh.param("laser_scan_topic", laser_scan_topic, std::string("spinning_lidar/scan"));
-		nh.param("filtered_scan_topic", filtered_scan_topic, std::string("spinning_lidar/filtered_scan"));
-		nh.param("filtered_cloud_topic", filtered_cloud_topic, std::string("spinning_lidar/filtered_cloud"));
-		nh.param("features_cloud_topic", features_cloud_topic, std::string("spinning_lidar/features_cloud"));
-		nh.param("assembled_ds_cloud_topic", assembled_ds_cloud_topic, std::string("spinning_lidar/assembled_ds_cloud"));
-		nh.param("ir_interrupt_topic", ir_interrupt_topic, std::string("spinning_lidar/ir_interrupt"));
-
+		nh_.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
+		nh_.param("tf_filter_tol", tf_filter_tol, 0.01);
+		nh_.param("base_link", base_link_, std::string("laser_mount"));
+		nh_.param("laser_link_", laser_link_, std::string("laser"));
+		nh_.param("laser_scan_topic_", laser_scan_topic_, std::string("spinning_lidar/scan"));
+		nh_.param("filtered_scan_topic", filtered_scan_topic, std::string("spinning_lidar/filtered_scan"));
+		nh_.param("filtered_cloud_topic", filtered_cloud_topic, std::string("spinning_lidar/filtered_cloud"));
+		nh_.param("features_cloud_topic", features_cloud_topic, std::string("spinning_lidar/features_cloud"));
+		nh_.param("assembled_ds_cloud_topic", assembled_ds_cloud_topic, std::string("spinning_lidar/assembled_ds_cloud"));
+		nh_.param("ir_interrupt_topic", ir_interrupt_topic, std::string("spinning_lidar/ir_interrupt"));
 
 		filtered_cloud_pub = nh_.advertise<sensor_msgs::PointCloud2>(filtered_cloud_topic, 1);
 		cloud_features_pub = nh.advertise<sensor_msgs::PointCloud2>(features_cloud_topic, 1);
@@ -57,7 +58,7 @@ public:
 
 		tf_laser_filter.setTolerance(ros::Duration(tf_filter_tol));
 		tf_laser_filter.registerCallback( boost::bind(&FeatureExtractorLOAM::laserScanCallback, this, _1) );
-		ros::Subscriber ir_interrupt_sub = nh.subscribe(ir_interrupt_topic, 1, &FeatureExtractorLOAM::irInterruptCallback, this);
+		ir_interrupt_sub = nh_.subscribe(ir_interrupt_topic, 2, &FeatureExtractorLOAM::irInterruptCallback, this);
 	}
 
 
@@ -79,8 +80,8 @@ private:
 	tf::MessageFilter<sensor_msgs::LaserScan> tf_laser_filter;
 	laser_geometry::LaserProjection laser_projector;
 
-	std::string laser_scan_topic, filtered_scan_topic, filtered_cloud_topic, features_cloud_topic, assembled_ds_cloud_topic, ir_interrupt_topic;
-	std::string laser_link, base_link;
+	std::string laser_scan_topic_, filtered_scan_topic, filtered_cloud_topic, features_cloud_topic, assembled_ds_cloud_topic, ir_interrupt_topic;
+	std::string laser_link_, base_link_;
 	ros::Publisher filtered_scan_pub;
 
 	bool system_inited = false;
@@ -110,24 +111,16 @@ private:
 	int cloud_sort_index[1200];
 	int cloud_neighbors_picked[1200];
 
-
-	void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
-	{
-		time_start = time_last_scan - init_time;
-		new_sweep = true;
-	}
-
-
-	void updateTimeVariables(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
+	void updateTimeVariables(const sensor_msgs::PointCloud2 cloud_in_msg)
 	{
 		if (!system_inited)
 		{
-			init_time = cloud_in_msg->header.stamp.toSec();
+			init_time = cloud_in_msg.header.stamp.toSec();
 			time_start = init_time;
 			system_inited = true;
 		}
 		time_last_scan = time_curr_scan;
-		time_curr_scan = cloud_in_msg->header.stamp.toSec();
+		time_curr_scan = cloud_in_msg.header.stamp.toSec();
 		time_elapsed = time_curr_scan - init_time;
 	}
 
@@ -447,7 +440,6 @@ private:
 		cloud_assembled_ds_msg.header.stamp = ros::Time().fromSec(time_last_scan);
 		cloud_assembled_ds_msg.header.frame_id = "laser_mount";
 		cloud_assembled_ds_pub.publish(cloud_assembled_ds_msg);
-		ROS_INFO("Features extracted");
 	}
 
 
@@ -483,42 +475,28 @@ private:
 		filtered_scan_pub.publish(filtered_scan);
 
 		// Projection of laser scans into point clouds
-    	sensor_msgs::PointCloud2::Ptr filtered_cloud, cloud_in_msg;
+    	sensor_msgs::PointCloud2 filtered_cloud, cloud_in_msg;
 		try
 		{
-			laser_projector.transformLaserScanToPointCloud(laser_link, filtered_scan, *filtered_cloud, tf_listener);
-			laser_projector.transformLaserScanToPointCloud(base_link, filtered_scan, *cloud_in_msg, tf_listener);
+			laser_projector.transformLaserScanToPointCloud(laser_link_, filtered_scan, filtered_cloud, tf_listener);
+			laser_projector.transformLaserScanToPointCloud(base_link_, filtered_scan, cloud_in_msg, tf_listener);
 		}
 		catch (tf::TransformException& e)
 		{
-			std::cout << e.what();
+			// std::cout << e.what();
 			return;
 		}
-		filtered_cloud->header = scan->header;
-		filtered_cloud_pub.publish(*filtered_cloud);
+		filtered_cloud.header = scan->header;
+		filtered_cloud_pub.publish(filtered_cloud);
 
 		/* Timing variables initialization/update */
 		updateTimeVariables(cloud_in_msg);
-		// updateTimeVariables(filtered_cloud);
 
 		/* Conversion of ROS PointCloud2 msg to PCL container */
-		pcl::fromROSMsg(*cloud_in_msg, *cloud_in_pcl);
-		// pcl::fromROSMsg(*filtered_cloud, *cloud_in_pcl);
+		pcl::fromROSMsg(cloud_in_msg, *cloud_in_pcl);
 
 		/* We create an empty point cloud object in which we will put points for feature extraction */
 		extractValidPointsNewCloud();
-		
-		// try
-		// {
-		// 	tf::StampedTransform transform;
-		// 	tf_listener.lookupTransform(base_link, laser_link, ros::Time(0), transform);
-		// 	pcl_ros::transformPointCloud(*valid_cloud, *valid_cloud, transform);
-	    // }
-	    // catch (tf::TransformException ex)
-		// {
-		// 	ROS_ERROR("%s", ex.what());
-	    // }
-
 
 	    rejectInvalidPoints();
 
@@ -528,6 +506,15 @@ private:
 
 	    publishClouds();
 
+	}
+
+
+
+
+	void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
+	{
+		time_start = time_last_scan - init_time;
+		new_sweep = true;
 	}
 
 
