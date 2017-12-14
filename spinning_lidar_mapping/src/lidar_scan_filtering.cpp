@@ -1,10 +1,8 @@
 
-
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <sensor_msgs/point_cloud_conversion.h>
 #include <tf/transform_listener.h>
 #include <tf/message_filter.h>
 #include <message_filters/subscriber.h>
@@ -17,7 +15,6 @@
 
 
 float inf = std::numeric_limits<float>::infinity();
-int num_points_thesh = 5000;
 double min_dist_to_sensor;
 bool apply_voxel_filter;
 
@@ -101,6 +98,7 @@ private:
 			return;
 		}
 
+		cloud.header = scan->header;
 		filtered_cloud_pub_.publish(cloud);
 	}
 };

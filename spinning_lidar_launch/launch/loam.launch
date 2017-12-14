@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch> 
+
+	<include file="$(find spinning_lidar_launch)/launch/motor_control.launch"/>
+	<include file="$(find spinning_lidar_launch)/launch/lidar_jointstates_publisher.launch"/>
+	<include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
+
+    <node name="loam_feature_extractor_node" pkg="spinning_lidar_mapping" type="loam_feature_extractor" output="screen" >
+        <param name="min_dist_to_sensor" value="5.0" />
+        <param name="laser_link" type="string" value="laser" />
+        <param name="base_link" type="string" value="laser_mount" />
+        <param name="laser_scan_topic" type="string" value="spinning_lidar/scan" />
+        <param name="filtered_scan_topic" type="string" value="spinning_lidar/filtered_scan" />
+        <param name="ir_interrupt_topic" type="string" value="spinning_lidar/ir_interrupt" />
+    </node>
+
+	<include file="$(find spinning_lidar_viz)/launch/view_live_sensor.launch"/>
+	
+
+</launch>

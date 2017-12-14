@@ -11,6 +11,9 @@
 #include <pcl/kdtree/kdtree_flann.h>
 
 
+const int max_num_plane_features = 4;
+const int max_num_edge_features = 2;
+const int max_num_edges_map = 20;
 const double min_range_scan = 0.5;
 const double max_range_scan = 60.0;
 const double smoothness_thresh = 0.05;
@@ -40,8 +43,8 @@ tf::TransformListener *tf_listener_ptr;
 int cloud_sort_index[1200];
 int cloud_neighbors_picked[1200];
 
-int skipFrameNum = 2;
-int skipFrameCount = 0;
+// int skipFrameNum = 2;
+// int skipFrameCount = 0;
 
 
 void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
@@ -197,8 +200,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 	}
 
 	// Feature containers
-	pcl::PointCloud<pcl::PointXYZHSV>::Ptr corner_points_sharp(new pcl::PointCloud<pcl::PointXYZHSV>());
-	pcl::PointCloud<pcl::PointXYZHSV>::Ptr corner_points_less_sharp(new pcl::PointCloud<pcl::PointXYZHSV>());
+	pcl::PointCloud<pcl::PointXYZHSV>::Ptr edge_points_sharp(new pcl::PointCloud<pcl::PointXYZHSV>());
+	pcl::PointCloud<pcl::PointXYZHSV>::Ptr edge_points_less_sharp(new pcl::PointCloud<pcl::PointXYZHSV>());
 	pcl::PointCloud<pcl::PointXYZHSV>::Ptr surf_points_flat(new pcl::PointCloud<pcl::PointXYZHSV>());
 	pcl::PointCloud<pcl::PointXYZHSV>::Ptr surf_points_less_flat(new pcl::PointCloud<pcl::PointXYZHSV>());
 
@@ -237,22 +240,26 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 
 				num_largest_picked++;
 
-				//Edge points selection based on smoothness values
-				if (num_largest_picked <= 2)
+				// Edge points selection based on smoothness values
+				// The best <max_num_edge_features> are used as features.
+				// The next <max_num_edges_map> are used for building the map.
+				// The rest are discarded
+				if (num_largest_picked <= max_num_edge_features)
 				{
 					laser_cloud->points[cloud_sort_index[j]].v = 2;
-					corner_points_sharp->push_back(laser_cloud->points[cloud_sort_index[j]]);
+					edge_points_sharp->push_back(laser_cloud->points[cloud_sort_index[j]]);
 				}
-				else if (num_largest_picked <= 20)
+				else if (num_largest_picked <= max_num_edges_map)
 				{
 					laser_cloud->points[cloud_sort_index[j]].v = 1;
-					corner_points_less_sharp->push_back(laser_cloud->points[cloud_sort_index[j]]);
+					edge_points_less_sharp->push_back(laser_cloud->points[cloud_sort_index[j]]);
 				}
 				else
 				{
 					break;
 				}
 
+				// We flag the point and its neighbors as already chosen
 				cloud_neighbors_picked[cloud_sort_index[j]] = 1;
 				for (int k = 1; k <= 5; k++)
 				{
@@ -297,12 +304,14 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 				surf_points_flat->push_back(laser_cloud->points[cloud_sort_index[j]]);
 
 				num_smallest_picked++;
+
 				// If we have already picked too many planes, we break the loop
-				if (num_smallest_picked >= 4)
+				if (num_smallest_picked >= max_num_plane_features)
 				{
 					break;
 				}
 
+				// We flag the point and its neighbors as already chosen
 				cloud_neighbors_picked[cloud_sort_index[j]] = 1;
 				for (int k = 1; k <= 5; k++)
 				{
@@ -334,6 +343,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 		}
 	}
 
+	// We save the rest of the point cloud for mapping
 	for (int i = 0; i < cloud_size; i++)
 	{
 		if (laser_cloud->points[i].v == 0)
@@ -342,30 +352,33 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 		}
 	}
 
-	// Voxel grid filtering on the points that are not so flat
+	// Voxel grid filtering on the rest of the point cloud, to regularize it
 	pcl::PointCloud<pcl::PointXYZHSV>::Ptr surf_points_less_flat_dsz(new pcl::PointCloud<pcl::PointXYZHSV>());
 	pcl::VoxelGrid<pcl::PointXYZHSV> down_size_filter;
 	down_size_filter.setInputCloud(surf_points_less_flat);
 	down_size_filter.setLeafSize(0.1, 0.1, 0.1);
 	down_size_filter.filter(*surf_points_less_flat_dsz);
 
-	*cloud_features += *corner_points_sharp;
+	// Concatenation of point clouds
+	*cloud_features += *edge_points_sharp;
 	*cloud_features += *surf_points_flat;
-	*cloud_assembled_ds += *corner_points_less_sharp;
+	*cloud_assembled_ds += *edge_points_less_sharp;
 	*cloud_assembled_ds += *surf_points_less_flat_dsz;
 
+	// Variables clearing
 	cloud_in_pcl->clear();
 	laser_cloud_tmp->clear();
 	laser_cloud->clear();
-	corner_points_sharp->clear();
-	corner_points_less_sharp->clear();
+	edge_points_sharp->clear();
+	edge_points_less_sharp->clear();
 	surf_points_flat->clear();
 	surf_points_less_flat->clear();
 	surf_points_less_flat_dsz->clear();
 
-	if (skipFrameCount >= skipFrameNum)
-	{
-		skipFrameCount = 0;
+	
+	// if (skipFrameCount >= skipFrameNum)
+	// {
+	// 	skipFrameCount = 0;
 
 		sensor_msgs::PointCloud2 cloud_features_msg, cloud_assembled_ds_msg;;
 		pcl::toROSMsg(*cloud_features, cloud_features_msg);
@@ -378,8 +391,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr &cloud_in_msg)
 		cloud_assembled_ds_msg.header.frame_id = "laser_mount";
 		cloud_assembled_ds_pub.publish(cloud_assembled_ds_msg);
 		ROS_INFO("Features extracted");
-	}
-	skipFrameCount++;
+	// }
+	// skipFrameCount++;
 }
 
 
