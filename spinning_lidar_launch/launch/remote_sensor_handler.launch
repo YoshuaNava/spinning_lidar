@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch> 
+
+	<include file="$(find spinning_lidar_launch)/launch/motor_control.launch"/>
+	<include file="$(find spinning_lidar_launch)/launch/lidar_jointstates_publisher.launch"/>
+	<include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
+
+</launch>
