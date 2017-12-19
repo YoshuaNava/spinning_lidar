@@ -2,7 +2,7 @@
 <launch> 
 
 
-    <node name="loam_feature_extractor_node" pkg="spinning_lidar_mapping" type="loam_feature_extractor" output="screen" >
+    <node name="loam_feature_extractor_node" pkg="spinning_lidar_loam" type="loam_feature_extractor" output="screen" >
         <param name="min_dist_to_sensor" value="5.0" />
         <param name="laser_link" type="string" value="laser" />
         <param name="base_link" type="string" value="laser_mount" />

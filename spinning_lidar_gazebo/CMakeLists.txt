@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(spinning_lidar_gazebo)
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
+add_compile_options(-std=c++11)
+set(CMAKE_BUILD_TYPE Release)
+
+find_package(gazebo REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
-  spinning_lidar_motor_control
+  roscpp
 )
 
 catkin_package(
-  CATKIN_DEPENDS  spinning_lidar_motor_control
+  CATKIN_DEPENDS  roscpp
 )
 
+include_directories(${GAZEBO_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
+# link_directories(${GAZEBO_LIBRARY_DIRS})
+
+
+add_library(ir_interrupt_plugin SHARED src/ir_interrupt_plugin.cpp)
+target_link_libraries(ir_interrupt_plugin ${catkin_LIBRARIES})

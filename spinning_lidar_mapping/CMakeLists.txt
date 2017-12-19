@@ -24,12 +24,12 @@ find_package(PCL REQUIRED)
 
 catkin_package(
     DEPENDS EIGEN3 PCL
-    INCLUDE_DIRS include
+    # INCLUDE_DIRS include
     CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters pcl_ros roscpp sensor_msgs std_msgs tf
 )
 
 include_directories(
-    include
+    # include
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
@@ -43,9 +43,6 @@ add_executable(interrupt_laser_assembler src/interrupt_laser_assembler.cpp)
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 
 
-add_executable(loam_feature_extractor src/loam/feature_extractor.cpp)
-target_link_libraries(loam_feature_extractor ${catkin_LIBRARIES})
-
 
 if(BUILD_TESTS)
     add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp)
@@ -57,6 +54,4 @@ if(BUILD_TESTS)
     add_executable(test_pcl_ros test/test_pcl_ros.cpp)
     target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})
 
-    add_executable(test_loam_feature_extraction test/loam/test_loam_feature_extraction.cpp)
-    target_link_libraries(test_loam_feature_extraction ${catkin_LIBRARIES})
 endif()

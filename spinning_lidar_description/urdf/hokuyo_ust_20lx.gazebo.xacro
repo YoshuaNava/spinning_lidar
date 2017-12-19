@@ -72,4 +72,14 @@
     	</gazebo>
     </xacro:macro>
 
+
+	<gazebo>
+		<plugin name="ir_interrupt_plugin" filename="libir_interrupt_plugin.so">
+ 			<joint>lidar_spin_joint</joint>
+ 			<half_cycle_int>true</half_cycle_int>
+			<angle_tol>0.02</angle_tol> 
+		</plugin>
+	</gazebo> 
+
+
 </robot>

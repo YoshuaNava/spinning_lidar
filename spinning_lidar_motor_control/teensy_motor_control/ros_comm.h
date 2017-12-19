@@ -62,10 +62,6 @@ void initializeSensorMsgs()
 {
     motor_state_msg.header.frame_id = SENSOR_FRAME;
     joint_state_msg.header.frame_id = SENSOR_FRAME;
-    char* name[] = {(char*) SPINNING_JOINT};
-    float eff[] = {0};
-    joint_state_msg.name = name;
-    joint_state_msg.effort = eff;
     joint_state_msg.name_length = 1;
     joint_state_msg.position_length = 1;
     joint_state_msg.velocity_length = 1;
@@ -115,11 +111,15 @@ inline void publish_motor_state(bool stopped, double curr_angle, double offset_a
 inline void publish_joint_states(double curr_angle, double curr_vel)
 {
     joint_state_msg.header.stamp = nh.now();
-    
+
+    char* name[] = {(char*) SPINNING_JOINT};
     float pos[] = {(float) -curr_angle};
     float vel[] = {(float) -curr_vel};
+    float eff[] = {0};
+    joint_state_msg.name = name;
     joint_state_msg.position = pos;
     joint_state_msg.velocity = vel;
+    joint_state_msg.effort = eff;
 
     joint_states_pub.publish(&joint_state_msg);
 }

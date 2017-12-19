@@ -21,19 +21,8 @@ generate_messages(
   std_msgs 
 )
 
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if your package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
+
 catkin_package(
-  #  INCLUDE_DIRS include
-  #  LIBRARIES spinning_lidar_motor_control
-  #  CATKIN_DEPENDS
     DEPENDS tf
 )
 
@@ -42,6 +31,3 @@ include_directories(
  ${catkin_INCLUDE_DIRS}
 )
 
-
-add_executable(lidar_jointstates_publisher src/lidar_jointstates_publisher.cpp)
-target_link_libraries(lidar_jointstates_publisher ${catkin_LIBRARIES})
