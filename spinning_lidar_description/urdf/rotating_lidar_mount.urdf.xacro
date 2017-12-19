@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot name="rotating_lidar_mount" xmlns:xacro="http://www.ros.org/wiki/xacro">
   
-    <!-- <xacro:include filename="$(find spinning_lidar_description)/urdf/Grippers/hokuyo_ust_20lx.gazebo.xacro" /> -->
+    <xacro:include filename="$(find spinning_lidar_description)/urdf/hokuyo_ust_20lx.gazebo.xacro" />
     <xacro:include filename="$(find spinning_lidar_description)/urdf/hokuyo_ust_20lx.urdf.xacro" />
     <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_lidar_mount.transmission.xacro" />
     <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
@@ -11,7 +11,7 @@
     <xacro:macro name="rotating_lidar_mount_macro" params="parent mount_link axis_link lidar_link *origin">
 
         <link name="${mount_link}">
-            <xacro:inertial_sphere_with_pose mass="0.01" diameter="0.03">
+            <xacro:inertial_sphere_with_pose mass="0.1" diameter="0.03">
                 <origin xyz="0 0 0" rpy="0 0 0"/>
             </xacro:inertial_sphere_with_pose>
             <collision name="collision">
@@ -39,7 +39,7 @@
         </joint>
 
         <link name="${axis_link}">
-            <xacro:inertial_sphere_with_pose mass="0.01" diameter="0.03">
+            <xacro:inertial_sphere_with_pose mass="0.1" diameter="0.03">
                 <origin xyz="0 0 0" rpy="0 0 0"/>
             </xacro:inertial_sphere_with_pose>
             <visual name="visual">
@@ -72,6 +72,15 @@
         </joint>
         
         <xacro:lidar_spin_joint_transmission />
+
+        <xacro:hokuyo_ust_20lx_gazebo   name="lidar_plugin_gazebo"
+                                        lidar_link="${lidar_link}" 
+                                        topic="spinning_lidar/scan" 
+                                        update_rate="40.0"
+                                        ray_count="1080"
+                                        min_angle="-270"
+                                        max_angle="270" />
+
         
     </xacro:macro>
 </robot>

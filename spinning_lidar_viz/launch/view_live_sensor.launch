@@ -14,7 +14,7 @@
     <node name="lidar_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
     	<param name="publish_frequency" value="200.0"/>
         <param name="use_tf_static" value="true"/>
-        <param name="ignore_timestamp" value="true"/>
+        <!-- <param name="ignore_timestamp" value="true"/> -->
     </node>
 
 	<param name="use_gui" value="true" />

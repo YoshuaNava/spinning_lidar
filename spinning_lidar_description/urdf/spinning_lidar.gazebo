@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot name="spinning_hokuyo_utm30lx" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+	<gazebo>
+		<plugin name="gazebo_ros_controller" filename="libgazebo_ros_control.so">
+			<robotNamespace>/</robotNamespace>
+		</plugin>
+	</gazebo>
+
+	<gazebo reference="laser_mount">
+		<material>Gazebo/DarkGrey</material>
+		<gravity>true</gravity>
+	</gazebo>
+
+</robot>
+
+

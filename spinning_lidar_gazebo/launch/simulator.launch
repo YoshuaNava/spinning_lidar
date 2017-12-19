@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="name" default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
+
+	<rosparam file="$(find spinning_lidar_motor_control)/config/controllers.yaml" command="load"/>
+	<arg name="controllers" default="joint_state_controller
+									 joint_vel_controller"/>
+
+	<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)"/>
+
+	<param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
+	<node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model spinning_lidar -param robot_description"  respawn="false" output="screen" />
+
+	<arg name="use_sim_time" default="true" />
+	<arg name="gui" default="true" />
+	<arg name="headless" default="false" />
+	<arg name="world_name" default="$(find ridgeback_gazebo)/worlds/ridgeback_race.world" />
+
+
+	<!-- Launch Gazebo with the specified world -->
+	<include file="$(find gazebo_ros)/launch/empty_world.launch">
+		<arg name="debug" value="0" />
+		<arg name="gui" value="$(arg gui)" />
+		<arg name="use_sim_time" value="$(arg use_sim_time)" />
+		<arg name="headless" value="$(arg headless)" />
+		<!-- <arg name="world_name" value="$(arg world_name)" /> -->
+		<arg name="paused" value="false"/>
+	</include>
+
+
+	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+		<param name="rate" value="200.0"/>
+        <rosparam param="source_list">["/spinning_lidar/joint_states"]</rosparam>
+        <param name="use_gui" value="false"/>
+    </node>
+
+	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" > 
+    	<param name="publish_frequency" value="200.0"/>
+        <param name="use_tf_static" value="true"/>
+        <!-- <param name="ignore_timestamp" value="true"/> -->
+    </node>
+
+
+	<param name="use_gui" value="true" />
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_viz)/rviz/live_sensor_loam.rviz" />
+
+</launch>

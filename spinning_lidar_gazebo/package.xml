@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package>
+  <name>spinning_lidar_gazebo</name>
+  <version>0.0.1</version>
+  <description>The spinning_lidar_gazebo package</description>
+
+  <maintainer email="yoshua.nava@kth.se">Yoshua Nava</maintainer>
+  <author email="yoshua@kth.se">Yoshua Nava</author>
+
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>spinning_lidar_motor_control</build_depend>
+
+  <run_depend>spinning_lidar_motor_control</run_depend>
+
+
+</package>
