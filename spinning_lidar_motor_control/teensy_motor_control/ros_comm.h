@@ -20,7 +20,7 @@ using spinning_lidar_motor_control::ChangeTargetVelocity;
 
 
 /************************       Constants       ************************/
-const long BAUD_RATE = 57600;
+const long BAUD_RATE = 115200;
 const char* SENSOR_FRAME = "/laser_axis";
 const char* SPINNING_JOINT = "lidar_spin_joint";
 
