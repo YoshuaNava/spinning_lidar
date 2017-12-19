@@ -63,6 +63,7 @@ void loop()
             control_motor();
         }
         publish_motor_state(motor_stopped, prev_angle, angle_offset, vel);
+        publish_joint_states(prev_angle, vel);
         nh.spinOnce();
     }
     
