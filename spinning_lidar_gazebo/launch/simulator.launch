@@ -29,12 +29,6 @@
 	</include>
 
 
-	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
-		<param name="rate" value="200.0"/>
-        <rosparam param="source_list">["/spinning_lidar/joint_states"]</rosparam>
-        <param name="use_gui" value="false"/>
-    </node>
-
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" > 
     	<param name="publish_frequency" value="200.0"/>
         <param name="use_tf_static" value="true"/>
