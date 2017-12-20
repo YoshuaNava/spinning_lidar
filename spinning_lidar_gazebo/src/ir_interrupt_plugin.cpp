@@ -58,10 +58,6 @@ namespace gazebo
                 angle_tol_ = _sdf->GetElement("angle_tol")->Get<double>();
             }
             connection_handler_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&irInterruptPlugin::UpdateChild, this));
-            printf("%s\n",joint_name_.c_str());
-            printf("half_cycle_int %i\n", half_cycle_int_);
-            printf("angle tolerance %f\n", angle_tol_);
-            printf("READY\n");
 
             if (!ros::isInitialized())
             {

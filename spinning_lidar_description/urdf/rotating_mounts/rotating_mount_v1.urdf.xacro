@@ -1,19 +1,25 @@
 <?xml version="1.0"?>
-<robot name="rotating_lidar_mount" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="rotating_mount_v1" xmlns:xacro="http://www.ros.org/wiki/xacro">
   
-    <xacro:include filename="$(find spinning_lidar_description)/urdf/hokuyo_ust_20lx.gazebo.xacro" />
-    <xacro:include filename="$(find spinning_lidar_description)/urdf/hokuyo_ust_20lx.urdf.xacro" />
-    <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_lidar_mount.transmission.xacro" />
+    <xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.urdf.xacro" />
+    <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/rotating_mount_v1.transmission.xacro" />
+    <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/rotating_mount_v1.gazebo" />
     <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
 
     <xacro:property name="M_PI" value="3.14159265359"/>
 
-    <xacro:macro name="rotating_lidar_mount_macro" params="parent mount_link axis_link lidar_link *origin">
+    <xacro:macro name="rotating_mount_v1_macro" params="parent mount_link axis_link lidar_link *origin">
+
+        <link name="${mount_link}_base_link" />
+
+        <joint name="laser_base_link_to_parent" type="fixed">
+            <parent link="${parent}"/>
+            <child link="${mount_link}_base_link"/>
+            <xacro:insert_block name="origin"/>
+        </joint>
 
         <link name="${mount_link}">
-            <xacro:inertial_sphere_with_pose mass="0.1" diameter="0.03">
-                <origin xyz="0 0 0" rpy="0 0 0"/>
-            </xacro:inertial_sphere_with_pose>
+            <xacro:inertial_cuboid mass="0.15" x_length="0.4" y_length="0.8" z_length="1.5" />
             <collision name="collision">
                 <origin xyz="0 0 0" rpy="0 0 0"/>
                 <geometry>
@@ -31,17 +37,15 @@
             </visual>
         </link>
 
-        <joint name="lidar_mount_root_joint" type="fixed">
-            <xacro:insert_block name="origin"/>
-            <axis xyz="0 0 0"/>
-            <parent link="${parent}"/>
+        <joint name="${mount_link}_base_link_to_mount" type="fixed">
+            <parent link="${mount_link}_base_link"/>
             <child link="${mount_link}"/>
+            <axis xyz="0 0 0"/>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
         </joint>
 
         <link name="${axis_link}">
-            <xacro:inertial_sphere_with_pose mass="0.1" diameter="0.03">
-                <origin xyz="0 0 0" rpy="0 0 0"/>
-            </xacro:inertial_sphere_with_pose>
+            <xacro:inertial_cuboid mass="0.1" x_length="0.4" y_length="0.8" z_length="1.5"/>
             <visual name="visual">
                 <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
                 <geometry>
@@ -59,7 +63,7 @@
             <parent link="${mount_link}"/>
             <child link="${axis_link}"/>
             <limit effort="1000" velocity="${2*M_PI}"/>
-            <joint_properties damping="0.0" friction="0.0"/>
+            <joint_properties damping="0.0" />
         </joint>
 
         <xacro:hokuyo_ust_20lx_model name="${lidar_link}" />
@@ -73,14 +77,6 @@
         
         <xacro:lidar_spin_joint_transmission />
 
-        <xacro:hokuyo_ust_20lx_gazebo   name="lidar_plugin_gazebo"
-                                        lidar_link="${lidar_link}" 
-                                        topic="spinning_lidar/scan" 
-                                        update_rate="40.0"
-                                        ray_count="1080"
-                                        min_angle="-270"
-                                        max_angle="270" />
-
-        
+        <xacro:rotating_mount_v1_gazebo_macro />
     </xacro:macro>
 </robot>

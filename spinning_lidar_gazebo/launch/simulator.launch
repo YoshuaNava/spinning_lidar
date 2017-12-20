@@ -4,10 +4,10 @@
 	<arg name="name" default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
 
 	<rosparam file="$(find spinning_lidar_motor_control)/config/controllers.yaml" command="load" ns="spinning_lidar"/>
-	<arg name="controllers" default="joint_state_controller
-									 joint_vel_controller"/>
+	<arg name="spin_joint_controllers" default="spin_joint_states
+								 				spin_joint_vel_controller"/>
 
-	<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg controllers)" ns="spinning_lidar"/>
+	<node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg spin_joint_controllers)" ns="spinning_lidar"/>
 
 	<param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
 	<node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model spinning_lidar -param robot_description"  respawn="false" output="screen"/>
@@ -15,17 +15,16 @@
 	<arg name="use_sim_time" default="true" />
 	<arg name="gui" default="true" />
 	<arg name="headless" default="false" />
-	<arg name="world_name" default="$(find ridgeback_gazebo)/worlds/ridgeback_race.world" />
-
 
 	<!-- Launch Gazebo with the specified world -->
 	<include file="$(find gazebo_ros)/launch/empty_world.launch">
-		<arg name="debug" value="0" />
-		<arg name="gui" value="$(arg gui)" />
-		<arg name="use_sim_time" value="$(arg use_sim_time)" />
-		<arg name="headless" value="$(arg headless)" />
-		<!-- <arg name="world_name" value="$(arg world_name)" /> -->
+		<arg name="world_name" value="worlds/willowgarage.world"/> <!-- Note: the world_name is with respect to GAZEBO_RESOURCE_PATH environmental variable -->
 		<arg name="paused" value="false"/>
+		<arg name="use_sim_time" value="$(arg use_sim_time)" />
+		<arg name="gui" value="$(arg gui)" />
+		<arg name="headless" value="$(arg headless)" />
+		<arg name="debug" value="false" />
+		<!-- <arg name="world_name" value="$(arg world_name)" /> -->
 	</include>
 
 

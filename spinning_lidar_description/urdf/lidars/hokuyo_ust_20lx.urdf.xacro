@@ -1,14 +1,12 @@
 <?xml version="1.0"?>
 <robot name="hokuyo_ust_20lx" xmlns:xacro="http://www.ros.org/wiki/xacro">
+	<xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
+
 	<xacro:property name="M_PI" value="3.1415926535897931" />
 
 	<xacro:macro name="hokuyo_ust_20lx_model" params="name">
 		<link name="${name}">
-			<inertial>
-				<origin xyz="0 0 0" rpy="0 0 0" />
-				<mass value="0.270" />
-				<inertia ixx="2.632e-4" ixy="0" ixz="0" iyy="2.632e-4" iyz="0" izz="1.62e-4" />
-			</inertial>
+			<xacro:inertial_cuboid mass="0.130" x_length="0.1" y_length="0.1" z_length="0.1"/>
 			<visual>
 				<origin xyz="0 0 0" rpy="0 0 0" />
 				<geometry>
@@ -21,10 +19,20 @@
 			<collision>
 				<origin xyz="0 0 -0.0115" rpy="0 0 0" />
 				<geometry>
-					<box size="0.058 0.058 0.087" />
+					<box size="0.050 0.050 0.070" />
 				<!-- <mesh filename="package://spinning_lidar_description/meshes/LIDAR/hokuyo_ust_10lx.stl"/> -->
 				</geometry>
 			</collision>
 		</link>
+
+		
+	    <!-- <xacro:hokuyo_ust_20lx_gazebo_gpu   name="hokuyo_ust_20lx_gazebo"  -->
+	    <xacro:hokuyo_ust_20lx_gazebo   name="hokuyo_ust_20lx_gazebo"
+		                                lidar_link="${lidar_link}" 
+		                                topic="spinning_lidar/scan" 
+		                                update_rate="50.0"
+		                                ray_count="1080"
+		                                min_angle="-270.0"
+		                                max_angle="270.0" />
 	</xacro:macro>
 </robot>

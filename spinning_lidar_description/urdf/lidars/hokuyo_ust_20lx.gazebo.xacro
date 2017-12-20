@@ -28,7 +28,7 @@
 						<stddev>0.004</stddev>
 					</noise>
 				</ray>
-				<plugin name="gazebo_ros_${name}_controller" filename="libgazebo_ros_laser.so">
+				<plugin name="gazebo_ros_${name}" filename="libgazebo_ros_laser.so">
 					<topicName>${topic}</topicName>
 					<frameName>${lidar_link}</frameName>
 				</plugin>
@@ -40,9 +40,10 @@
     <xacro:macro name="hokuyo_ust_20lx_gazebo_gpu" params="name lidar_link topic update_rate ray_count min_angle max_angle">
     	<gazebo reference="${lidar_link}">
 	        <sensor type="gpu_ray" name="lidar_sensor_gpu">
-	        	<update_rate>${update_rate}</update_rate>
 	        	<pose>0 0 0 0 0 0</pose>
 	        	<visualize>false</visualize>
+	        	<always_on>true</always_on>
+	        	<update_rate>${update_rate}</update_rate>
 	        	<ray>
 		            <scan>
 		            	<horizontal>
@@ -63,7 +64,7 @@
 		            	<stddev>0.004</stddev>
 		            </noise>
 	        	</ray>
-	        	<plugin name="gazebo_ros_${name}_controller" filename="libgazebo_ros_gpu_laser.so">
+	        	<plugin name="gazebo_ros_${name}_gpu" filename="libgazebo_ros_gpu_laser.so">
 		        	<topicName>${topic}</topicName>
 		       		<frameName>${lidar_link}</frameName>
 	        	</plugin>

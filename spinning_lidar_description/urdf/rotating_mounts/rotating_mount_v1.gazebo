@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot name="rotating_mount_v1" xmlns:xacro="http://www.ros.org/wiki/xacro">
+	<xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.gazebo.xacro" />
+
+	<xacro:macro name="rotating_mount_v1_gazebo_macro">
+		<gazebo reference="laser_mount">
+			<material>Gazebo/DarkGrey</material>
+			<gravity>true</gravity>
+		</gazebo>
+
+		<gazebo>
+			<plugin name="spinning_lidar_gazebo_ros_control" filename="libgazebo_ros_control.so">
+				<robotNamespace>/spinning_lidar</robotNamespace>
+			</plugin>
+		</gazebo>
+	</xacro:macro>
+
+</robot>
+
+

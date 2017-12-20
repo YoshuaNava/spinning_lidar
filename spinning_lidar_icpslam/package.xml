@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>spinning_lidar_mapping</name>
+  <name>spinning_lidar_icpslam</name>
   <version>0.0.1</version>
-  <description>The spinning_lidar_mapping package</description>
+  <description>The spinning_lidar_icpslam package</description>
 
   <maintainer email="yoshua.nava@kth.se">Yoshua Nava</maintainer>
   <author email="yoshua@kth.se">Yoshua Nava</author>

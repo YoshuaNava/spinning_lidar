@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(spinning_lidar_mapping)
+project(spinning_lidar_icpslam)
 
 add_compile_options(-std=c++11)
 set(CMAKE_BUILD_TYPE Release)
