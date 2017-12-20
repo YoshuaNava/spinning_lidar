@@ -3,6 +3,7 @@
 	<xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
 
 	<xacro:property name="M_PI" value="3.1415926535897931" />
+	<xacro:property name="MAX_ANGLE_SWEEP" value="135.0" />
 
 	<xacro:macro name="hokuyo_ust_20lx_model" params="name">
 		<link name="${name}">
@@ -25,14 +26,16 @@
 			</collision>
 		</link>
 
+
+
 		
 	    <!-- <xacro:hokuyo_ust_20lx_gazebo_gpu   name="hokuyo_ust_20lx_gazebo"  -->
 	    <xacro:hokuyo_ust_20lx_gazebo   name="hokuyo_ust_20lx_gazebo"
 		                                lidar_link="${lidar_link}" 
 		                                topic="spinning_lidar/scan" 
-		                                update_rate="50.0"
+		                                update_rate="40.0"
 		                                ray_count="1080"
-		                                min_angle="-270.0"
-		                                max_angle="270.0" />
+		                                min_angle="-${MAX_ANGLE_SWEEP}"
+		                                max_angle="${MAX_ANGLE_SWEEP}" />
 	</xacro:macro>
 </robot>
