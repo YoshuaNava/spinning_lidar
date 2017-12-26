@@ -16,10 +16,6 @@
 
 
 
-// int skipFrameNum = 2;
-// int skipFrameCount = 0;
-
-
 class FeatureExtractorLOAM
 {
 public:
@@ -41,6 +37,7 @@ public:
 		surf_points_flat(new pcl::PointCloud<pcl::PointXYZHSV>()),
 		surf_points_less_flat(new pcl::PointCloud<pcl::PointXYZHSV>())
 	{
+		nh_.param("verbose_level", verbose_level, 1);
 		nh_.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
 		nh_.param("tf_filter_tol", tf_filter_tol, 0.01);
 		nh_.param("base_link", base_link_, std::string("laser_mount"));
@@ -506,7 +503,7 @@ private:
 
 	void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	{
-		// LIDAR scan filtering
+		/* Filtering of laser scan measurements that are too close to the sensor */
 		// Reference: https://github.com/RobustFieldAutonomyLab/spin_hokuyo/blob/master/src/hokuyo_robot_filter.cpp
 		sensor_msgs::LaserScan filtered_scan;
 		int num_range_meas = scan->ranges.size();
@@ -535,7 +532,7 @@ private:
 		}
 		filtered_scan_pub.publish(filtered_scan);
 
-		// Projection of laser scans into point clouds
+		/* Projection of laser scans into point clouds using TF */
     	sensor_msgs::PointCloud2 filtered_cloud, cloud_in_msg;
 		try
 		{
@@ -559,12 +556,16 @@ private:
 		/* We create an empty point cloud object in which we will put points for feature extraction */
 		extractValidPointsNewCloud();
 
+		/* Estimation of the point cloud smoothness using the criteria shown in the paper */
 		estimateSmoothnessCloud();
 
-	    // rejectInvalidPoints();
+		/* Rejection of points that are almost parallel to the laser rays, or on the borders of objects */
+	    rejectInvalidPoints();
 
+		/* Extraction of edge and plane features */
 	    extractFeatures();
 
+		/* Concatenation of current clouds */
 	    concatenateClouds();
 
 	    publishClouds();
