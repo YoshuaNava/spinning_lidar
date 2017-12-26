@@ -56,6 +56,11 @@ public:
 		cloud_features_pub = nh.advertise<sensor_msgs::PointCloud2>(features_cloud_topic, 1);
 		cloud_assembled_ds_pub = nh.advertise<sensor_msgs::PointCloud2>(assembled_ds_cloud_topic, 1);
 
+		verbose_level = 1;
+		edge_features_pub = nh.advertise<sensor_msgs::PointCloud2>("spinning_lidar/edge_features", 1);
+		plane_features_pub = nh.advertise<sensor_msgs::PointCloud2>("spinning_lidar/plane_features", 1);
+		smoothness_vis_pub = nh.advertise<sensor_msgs::PointCloud2>("spinning_lidar/smoothness_cloud", 1);
+
 		tf_laser_filter.setTolerance(ros::Duration(tf_filter_tol));
 		tf_laser_filter.registerCallback( boost::bind(&FeatureExtractorLOAM::laserScanCallback, this, _1) );
 		ir_interrupt_sub = nh_.subscribe(ir_interrupt_topic, 2, &FeatureExtractorLOAM::irInterruptCallback, this);
@@ -64,15 +69,17 @@ public:
 
 private:
 	const float inf = std::numeric_limits<float>::infinity();
-	const int max_num_plane_features = 4;
-	const int max_num_edge_features = 2;
-	const int max_num_edges_map = 20;
-	const double min_range_scan = 0.5;
-	const double max_range_scan = 60.0;
-	const double smoothness_thresh = 0.05;
-	const double pts_dist_thresh = 0.1;
-	const int num_sectors = 4;
+	const int MAX_NUM_PLANE_FEATURES = 4;
+	const int MAX_NUM_EDGE_FEATURES = 2;
+	const int MAX_NUM_EDGES_MAP = 20;
+	const double MIN_RANGE_SCAN = 0.5;
+	const double MAX_RANGE_SCAN = 60.0;
+	const double SMOOTHNESS_THRESH = 0.05;
+	const double EDGE_PLANE_THRESH = 0.1;
+	const double PTS_DIST_THRESH = 0.1;
+	const int NUM_SECTORS = 4;
 
+	int verbose_level;
 	double tf_filter_tol;
 	double min_dist_to_sensor;
 	ros::Publisher filtered_cloud_pub;
@@ -108,6 +115,11 @@ private:
 	ros::Publisher cloud_features_pub;
 	ros::Publisher cloud_assembled_ds_pub;
 
+	// Publishers for debugging
+	ros::Publisher edge_features_pub;
+	ros::Publisher plane_features_pub;
+	ros::Publisher smoothness_vis_pub;
+
 	int cloud_sort_index[1200];
 	int cloud_neighbors_picked[1200];
 
@@ -139,7 +151,7 @@ private:
 			point_in.v = 0;
 
 			/* If the point is not too close, we add it to the point cloud */
-			if (!((fabs(point_in.x) < min_range_scan) && (fabs(point_in.y) < min_range_scan) && (fabs(point_in.z) < min_range_scan)))
+			if ((fabs(point_in.x) >= MIN_RANGE_SCAN) || (fabs(point_in.y) >= MIN_RANGE_SCAN) || (fabs(point_in.z) >= MIN_RANGE_SCAN))
 			{
 				valid_cloud->push_back(point_in);
 				cloud_sort_index[cloud_size] = cloud_size;
@@ -166,11 +178,35 @@ private:
 		** This is done for each point in the cloud */
 		for (int i = 5; i < cloud_size - 5; i++)
 		{
-			float diff_X = valid_cloud->points[i - 5].x + valid_cloud->points[i - 4].x + valid_cloud->points[i - 3].x + valid_cloud->points[i - 2].x + valid_cloud->points[i - 1].x - 10 * valid_cloud->points[i].x + valid_cloud->points[i + 1].x + valid_cloud->points[i + 2].x + valid_cloud->points[i + 3].x + valid_cloud->points[i + 4].x + valid_cloud->points[i + 5].x;
-			float diff_Y = valid_cloud->points[i - 5].y + valid_cloud->points[i - 4].y + valid_cloud->points[i - 3].y + valid_cloud->points[i - 2].y + valid_cloud->points[i - 1].y - 10 * valid_cloud->points[i].y + valid_cloud->points[i + 1].y + valid_cloud->points[i + 2].y + valid_cloud->points[i + 3].y + valid_cloud->points[i + 4].y + valid_cloud->points[i + 5].y;
-			float diff_Z = valid_cloud->points[i - 5].z + valid_cloud->points[i - 4].z + valid_cloud->points[i - 3].z + valid_cloud->points[i - 2].z + valid_cloud->points[i - 1].z - 10 * valid_cloud->points[i].z + valid_cloud->points[i + 1].z + valid_cloud->points[i + 2].z + valid_cloud->points[i + 3].z + valid_cloud->points[i + 4].z + valid_cloud->points[i + 5].z;
+			float diff_X = valid_cloud->points[i - 5].x + valid_cloud->points[i - 4].x
+						 + valid_cloud->points[i - 3].x + valid_cloud->points[i - 2].x 
+						 + valid_cloud->points[i - 1].x - 10 * valid_cloud->points[i].x 
+						 + valid_cloud->points[i + 1].x + valid_cloud->points[i + 2].x 
+						 + valid_cloud->points[i + 3].x + valid_cloud->points[i + 4].x 
+						 + valid_cloud->points[i + 5].x;
+			float diff_Y = valid_cloud->points[i - 5].y + valid_cloud->points[i - 4].y 
+						 + valid_cloud->points[i - 3].y + valid_cloud->points[i - 2].y 
+						 + valid_cloud->points[i - 1].y - 10 * valid_cloud->points[i].y 
+						 + valid_cloud->points[i + 1].y + valid_cloud->points[i + 2].y 
+						 + valid_cloud->points[i + 3].y + valid_cloud->points[i + 4].y 
+						 + valid_cloud->points[i + 5].y;
+			float diff_Z = valid_cloud->points[i - 5].z + valid_cloud->points[i - 4].z 
+						 + valid_cloud->points[i - 3].z + valid_cloud->points[i - 2].z 
+						 + valid_cloud->points[i - 1].z - 10 * valid_cloud->points[i].z 
+						 + valid_cloud->points[i + 1].z + valid_cloud->points[i + 2].z 
+						 + valid_cloud->points[i + 3].z + valid_cloud->points[i + 4].z 
+						 + valid_cloud->points[i + 5].z;
 
 			valid_cloud->points[i].s = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
+		}
+
+		if(verbose_level == 1)
+		{
+			sensor_msgs::PointCloud2 smoothness_cloud_msg;
+			pcl::toROSMsg(*valid_cloud, smoothness_cloud_msg);
+			smoothness_cloud_msg.header.stamp = ros::Time().fromSec(time_curr_scan);
+			smoothness_cloud_msg.header.frame_id = "laser_mount";	
+			smoothness_vis_pub.publish(smoothness_cloud_msg);
 		}
 	}
 
@@ -185,7 +221,7 @@ private:
 			float diff_Z = valid_cloud->points[i + 1].z - valid_cloud->points[i].z;
 			float diff_right = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
 
-			if (diff_right > smoothness_thresh)
+			if (diff_right > SMOOTHNESS_THRESH)
 			{
 				/* Estimation of overall depth/range of the points with respect to the laser */
 				float depth_pt = sqrt(valid_cloud->points[i].x * valid_cloud->points[i].x +
@@ -205,7 +241,7 @@ private:
 					float mag_diff = sqrt(diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z) / depth_pt;
 
 					/* If the projection of both points is about the same, choose point and neighbors */
-					if(mag_diff < pts_dist_thresh)
+					if(mag_diff < PTS_DIST_THRESH)
 					{
 						cloud_neighbors_picked[i-5] = 1;
 						cloud_neighbors_picked[i-4] = 1;
@@ -223,7 +259,7 @@ private:
 					float mag_diff = sqrt(diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z) / depth_next_pt;
 
 					/* If the projection of both points is about the same, neighbors */
-					if(mag_diff < pts_dist_thresh)
+					if(mag_diff < PTS_DIST_THRESH)
 					{
 						cloud_neighbors_picked[i+1] = 1;
 						cloud_neighbors_picked[i+2] = 1;
@@ -255,16 +291,16 @@ private:
 	void extractFeatures()
 	{
 		/* Division of the point cloud into 4 sectors */
-		int start_points[num_sectors] = {5, 6 + int((cloud_size - 10) / 4.0), 6 + int((cloud_size - 10) / 2.0), 6 + int(3 * (cloud_size - 10) / 4.0)};
-		int end_points[num_sectors] = {5 + int((cloud_size - 10) / 4.0), 5 + int((cloud_size - 10) / 2.0), 5 + int(3 * (cloud_size - 10) / 4.0), cloud_size - 6};
+		int start_points[NUM_SECTORS] = {5, 6 + int((cloud_size - 10) / 4.0), 6 + int((cloud_size - 10) / 2.0), 6 + int(3 * (cloud_size - 10) / 4.0)};
+		int end_points[NUM_SECTORS] = {5 + int((cloud_size - 10) / 4.0), 5 + int((cloud_size - 10) / 2.0), 5 + int(3 * (cloud_size - 10) / 4.0), cloud_size - 6};
 
 		/* Feature extraction per sector */
-		for (int i = 0; i < num_sectors; i++)
+		for (int i = 0; i < NUM_SECTORS; i++)
 		{
 			int start_pt_index = start_points[i];
 			int end_pt_index = end_points[i];
 
-			/* Ordering of cloud points based on their smoothness value */
+			/* Ordering of cloud points based on their smoothness value, from very smooth to less smooth (decreasing) */
 			for (int j = start_pt_index + 1; j <= end_pt_index; j++)
 			{
 				for (int k = j; k >= start_pt_index + 1; k--)
@@ -282,23 +318,23 @@ private:
 			for (int j = end_pt_index; j >= start_pt_index; j--)
 			{
 				/* If a point neighbors have not been picked, and the point is not too close nor too far, we choose it */
-				if (cloud_neighbors_picked[cloud_sort_index[j]] == 0 && valid_cloud->points[cloud_sort_index[j]].s > pts_dist_thresh &&
-					(fabs(valid_cloud->points[cloud_sort_index[j]].x) > min_range_scan || fabs(valid_cloud->points[cloud_sort_index[j]].y) > min_range_scan || fabs(valid_cloud->points[cloud_sort_index[j]].z) > min_range_scan) &&
-					fabs(valid_cloud->points[cloud_sort_index[j]].x) < max_range_scan && fabs(valid_cloud->points[cloud_sort_index[j]].y) < max_range_scan && fabs(valid_cloud->points[cloud_sort_index[j]].z) < max_range_scan)
+				if (cloud_neighbors_picked[cloud_sort_index[j]] == 0 && 
+					valid_cloud->points[cloud_sort_index[j]].s > EDGE_PLANE_THRESH &&
+				   (fabs(valid_cloud->points[cloud_sort_index[j]].x) > MIN_RANGE_SCAN || fabs(valid_cloud->points[cloud_sort_index[j]].y) > MIN_RANGE_SCAN || fabs(valid_cloud->points[cloud_sort_index[j]].z) > MIN_RANGE_SCAN) &&
+				   fabs(valid_cloud->points[cloud_sort_index[j]].x) < MAX_RANGE_SCAN && fabs(valid_cloud->points[cloud_sort_index[j]].y) < MAX_RANGE_SCAN && fabs(valid_cloud->points[cloud_sort_index[j]].z) < MAX_RANGE_SCAN)
 				{
-
 					num_largest_picked++;
 
 					/* Edge points selection based on smoothness values
-					** The best <max_num_edge_features> are used as features.
-					** The next <max_num_edges_map> are used for building the map.
+					** The best <MAX_NUM_EDGE_FEATURES> are used as features.
+					** The next <MAX_NUM_EDGES_MAP> are used for building the map.
 					** The rest are discarded */
-					if (num_largest_picked <= max_num_edge_features)
+					if (num_largest_picked <= MAX_NUM_EDGE_FEATURES)
 					{
 						valid_cloud->points[cloud_sort_index[j]].v = 2;
 						edge_points_sharp->push_back(valid_cloud->points[cloud_sort_index[j]]);
 					}
-					else if (num_largest_picked <= max_num_edges_map)
+					else if (num_largest_picked <= MAX_NUM_EDGES_MAP)
 					{
 						valid_cloud->points[cloud_sort_index[j]].v = 1;
 						edge_points_less_sharp->push_back(valid_cloud->points[cloud_sort_index[j]]);
@@ -312,11 +348,14 @@ private:
 					cloud_neighbors_picked[cloud_sort_index[j]] = 1;
 					for (int k = 1; k <= 5; k++)
 					{
-						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x - valid_cloud->points[cloud_sort_index[j] + k - 1].x;
-						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y - valid_cloud->points[cloud_sort_index[j] + k - 1].y;
-						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z - valid_cloud->points[cloud_sort_index[j] + k - 1].z;
+						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].x;
+						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].y;
+						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].z;
 						float diff = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
-						if (diff > smoothness_thresh)
+						if (diff > SMOOTHNESS_THRESH)
 						{
 							break;
 						}
@@ -329,7 +368,7 @@ private:
 						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y - valid_cloud->points[cloud_sort_index[j] + k + 1].y;
 						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z - valid_cloud->points[cloud_sort_index[j] + k + 1].z;
 						float diff = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
-						if (diff > smoothness_thresh)
+						if (diff > SMOOTHNESS_THRESH)
 						{
 							break;
 						}
@@ -344,9 +383,9 @@ private:
 			{
 				/* If the point neighbors have not been picked, and it is not too close nor too far, we choose it */
 				if (cloud_neighbors_picked[cloud_sort_index[j]] == 0 &&
-					valid_cloud->points[cloud_sort_index[j]].s < 0.1 &&
-					(fabs(valid_cloud->points[cloud_sort_index[j]].x) > min_range_scan || fabs(valid_cloud->points[cloud_sort_index[j]].y) > min_range_scan || fabs(valid_cloud->points[cloud_sort_index[j]].z) > min_range_scan) &&
-					fabs(valid_cloud->points[cloud_sort_index[j]].x) < max_range_scan && fabs(valid_cloud->points[cloud_sort_index[j]].y) < max_range_scan && fabs(valid_cloud->points[cloud_sort_index[j]].z) < max_range_scan)
+					valid_cloud->points[cloud_sort_index[j]].s < EDGE_PLANE_THRESH &&
+					(fabs(valid_cloud->points[cloud_sort_index[j]].x) > MIN_RANGE_SCAN || fabs(valid_cloud->points[cloud_sort_index[j]].y) > MIN_RANGE_SCAN || fabs(valid_cloud->points[cloud_sort_index[j]].z) > MIN_RANGE_SCAN) &&
+					fabs(valid_cloud->points[cloud_sort_index[j]].x) < MAX_RANGE_SCAN && fabs(valid_cloud->points[cloud_sort_index[j]].y) < MAX_RANGE_SCAN && fabs(valid_cloud->points[cloud_sort_index[j]].z) < MAX_RANGE_SCAN)
 				{
 					/* Point is chosen as part of a surface */
 					valid_cloud->points[cloud_sort_index[j]].v = -1;
@@ -355,7 +394,7 @@ private:
 					num_smallest_picked++;
 
 					/* If we have already picked too many planes, we break the loop */
-					if (num_smallest_picked >= max_num_plane_features)
+					if (num_smallest_picked >= MAX_NUM_PLANE_FEATURES)
 					{
 						break;
 					}
@@ -364,11 +403,14 @@ private:
 					cloud_neighbors_picked[cloud_sort_index[j]] = 1;
 					for (int k = 1; k <= 5; k++)
 					{
-						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x - valid_cloud->points[cloud_sort_index[j] + k - 1].x;
-						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y - valid_cloud->points[cloud_sort_index[j] + k - 1].y;
-						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z - valid_cloud->points[cloud_sort_index[j] + k - 1].z;
+						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].x;
+						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].y;
+						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z 
+									 - valid_cloud->points[cloud_sort_index[j] + k - 1].z;
 						float diff = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
-						if (diff > smoothness_thresh)
+						if (diff > SMOOTHNESS_THRESH)
 						{
 							break;
 						}
@@ -377,11 +419,14 @@ private:
 					}
 					for (int k = -1; k >= -5; k--)
 					{
-						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x - valid_cloud->points[cloud_sort_index[j] + k + 1].x;
-						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y - valid_cloud->points[cloud_sort_index[j] + k + 1].y;
-						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z - valid_cloud->points[cloud_sort_index[j] + k + 1].z;
+						float diff_X = valid_cloud->points[cloud_sort_index[j] + k].x 
+									 - valid_cloud->points[cloud_sort_index[j] + k + 1].x;
+						float diff_Y = valid_cloud->points[cloud_sort_index[j] + k].y 
+									 - valid_cloud->points[cloud_sort_index[j] + k + 1].y;
+						float diff_Z = valid_cloud->points[cloud_sort_index[j] + k].z 
+									 - valid_cloud->points[cloud_sort_index[j] + k + 1].z;
 						float diff = diff_X * diff_X + diff_Y * diff_Y + diff_Z * diff_Z;
-						if (diff > smoothness_thresh)
+						if (diff > SMOOTHNESS_THRESH)
 						{
 							break;
 						}
@@ -406,6 +451,20 @@ private:
 		down_size_filter.setInputCloud(surf_points_less_flat);
 		down_size_filter.setLeafSize(0.1, 0.1, 0.1);
 		down_size_filter.filter(*surf_points_less_flat_dsz);
+
+
+		if(verbose_level == 1)
+		{
+			sensor_msgs::PointCloud2 edge_features_msg, plane_features_msg;
+			pcl::toROSMsg(*edge_points_sharp, edge_features_msg);
+			pcl::toROSMsg(*surf_points_flat, plane_features_msg);
+			edge_features_msg.header.stamp = ros::Time().fromSec(time_curr_scan);
+			edge_features_msg.header.frame_id = "laser_mount";
+			plane_features_msg.header.stamp = ros::Time().fromSec(time_curr_scan);
+			plane_features_msg.header.frame_id = "laser_mount";	
+			edge_features_pub.publish(edge_features_msg);
+			plane_features_pub.publish(plane_features_msg);
+		}
 	}
 
 
@@ -430,7 +489,7 @@ private:
 
 	void publishClouds()
 	{
-		sensor_msgs::PointCloud2 cloud_features_msg, cloud_assembled_ds_msg;;
+		sensor_msgs::PointCloud2 cloud_features_msg, cloud_assembled_ds_msg;
 		pcl::toROSMsg(*cloud_features, cloud_features_msg);
 		cloud_features_msg.header.stamp = ros::Time().fromSec(time_curr_scan);
 		cloud_features_msg.header.frame_id = "laser_mount";
@@ -441,6 +500,8 @@ private:
 		cloud_assembled_ds_msg.header.frame_id = "laser_mount";
 		cloud_assembled_ds_pub.publish(cloud_assembled_ds_msg);
 	}
+
+
 
 
 	void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
@@ -498,7 +559,9 @@ private:
 		/* We create an empty point cloud object in which we will put points for feature extraction */
 		extractValidPointsNewCloud();
 
-	    rejectInvalidPoints();
+		estimateSmoothnessCloud();
+
+	    // rejectInvalidPoints();
 
 	    extractFeatures();
 
