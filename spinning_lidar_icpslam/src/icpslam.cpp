@@ -8,8 +8,11 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
-
+#include <tf/transform_listener.h>
 #include <tf/transform_datatypes.h>
+
+#include <pcl_ros/impl/transforms.hpp>
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -24,14 +27,15 @@
 const double POSE_DIST_THRESH = 0.05;
 const double ICP_FITNESS_THRESH = 0.1;
 
+
+bool odom_inited;
 double icp_epsilon;
 int icp_max_iters;
-bool odom_inited;
 
 int verbosity_level;
 
 // Input TF links and topics
-std::string laser_link, odom_link;
+std::string laser_link, robot_link, odom_link;
 std::string robot_odom_topic, robot_odom_path_topic, assembled_cloud_topic;
 
 // ICP SLAM output topics and publishers
@@ -50,7 +54,28 @@ nav_msgs::Path robot_odom_path, icp_odom_path;
 
 std::vector<Eigen::Vector3f> icp_translations;
 std::vector<Eigen::Quaternionf> icp_rotations;
+tf::TransformListener* tf_listener_ptr;
 
+
+void publishMapCloud()
+{
+	try
+	{
+		tf::StampedTransform transform;
+		tf_listener_ptr->lookupTransform(odom_link, robot_link, ros::Time(0), transform);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_odom_frame(new pcl::PointCloud<pcl::PointXYZ>());
+		pcl_ros::transformPointCloud(*map_cloud, *map_cloud_odom_frame, transform);
+		sensor_msgs::PointCloud2 map_cloud_msg;
+		pcl::toROSMsg(*map_cloud, map_cloud_msg);
+		map_cloud_msg.header.stamp = ros::Time().now();
+		map_cloud_msg.header.frame_id = odom_link;
+		map_cloud_pub.publish(map_cloud_msg);
+	}
+	catch (tf::TransformException ex)
+	{
+		ROS_ERROR("%s", ex.what());
+	}
+}
 
 
 void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
@@ -132,6 +157,13 @@ void assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 			icp_translations.push_back(curr_position);
 			icp_rotations.push_back(curr_orientation);
 
+			if(map_cloud->points.size() == 0)
+			{
+				*map_cloud = *aligned_cloud;
+				publishMapCloud();
+			}
+				
+
 			// Publishing for debug
 			if(verbosity_level >= 1)
 			{
@@ -186,9 +218,10 @@ int main(int argc, char** argv)
 
 	// TF links
 	nh.param("odom_link", odom_link, std::string("odom"));
+	nh.param("robot_link", robot_link, std::string("base_link"));
 	nh.param("laser_link", laser_link, std::string("laser"));
 
-	// Input odometry and point cloud topics
+	// Input robot odometry and point cloud topics
     nh.param("assembled_cloud_topic", assembled_cloud_topic, std::string("spinning_lidar/assembled_cloud"));
 	nh.param("robot_odom_topic", robot_odom_topic, std::string("/odometry/filtered"));
 	nh.param("robot_odom_path_topic", robot_odom_path_topic, std::string("robot_odom_path"));
@@ -218,12 +251,17 @@ int main(int argc, char** argv)
 
 	ros::Subscriber robot_odometry_sub = nh.subscribe(robot_odom_topic, 1, robotOdometryCallback);
 	ros::Subscriber assembled_cloud_sub = nh.subscribe(assembled_cloud_topic, 1, assembledCloudCallback);
+	
+	tf::TransformListener tf_listener;
+	tf_listener_ptr = &tf_listener;
 
 	ROS_INFO("ICP SLAM started");
 	ROS_INFO("Listening to robot odometry messages at %s", robot_odom_topic.c_str());
 	ROS_INFO("Listening to assembled cloud messages at %s", assembled_cloud_topic.c_str());
-		
+	
+
 	ros::spin();
+	
 
 	return EXIT_SUCCESS;
 }
