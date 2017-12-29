@@ -42,6 +42,6 @@ target_link_libraries(loam_feature_extractor ${catkin_LIBRARIES})
 
 
 if(BUILD_TESTS)
-    add_executable(test_odometry test/test_odometry.cpp)
-    target_link_libraries(test_odometry ${catkin_LIBRARIES} ${OpenCV_LIBS})
+    # add_executable(test_odometry test/test_odometry.cpp)
+    # target_link_libraries(test_odometry ${catkin_LIBRARIES} ${OpenCV_LIBS})
 endif()

@@ -42,6 +42,8 @@ target_link_libraries(lidar_scan_filtering ${catkin_LIBRARIES})
 add_executable(interrupt_laser_assembler src/interrupt_laser_assembler.cpp)
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 
+add_executable(icpslam src/icpslam.cpp)
+target_link_libraries(icpslam ${catkin_LIBRARIES})
 
 
 if(BUILD_TESTS)
@@ -54,4 +56,6 @@ if(BUILD_TESTS)
     add_executable(test_pcl_ros test/test_pcl_ros.cpp)
     target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})
 
+    add_executable(test_pcl_registration test/test_pcl_registration.cpp)
+    target_link_libraries(test_pcl_registration ${catkin_LIBRARIES})
 endif()
