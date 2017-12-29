@@ -21,8 +21,8 @@ void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
 	{
 		if(assemble_srv.response.cloud.width > num_points_thesh)
 		{
+			// ROS_INFO("Got cloud with %i points", assemble_srv.response.cloud.width);
 			point_cloud_pub.publish(assemble_srv.response.cloud);
-			ROS_INFO("Got cloud with %i points", assemble_srv.response.cloud.width);
 		}
 	}
 	else

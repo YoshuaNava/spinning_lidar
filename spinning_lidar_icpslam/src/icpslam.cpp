@@ -16,43 +16,54 @@
 #include <pcl/registration/icp.h>
 #include <pcl/filters/voxel_grid.h>
 
-const double POSE_DIST_THRESH = 0.1;
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
+#include "geometric_utils.h"
+
+const double POSE_DIST_THRESH = 0.05;
+const double ICP_FITNESS_THRESH = 0.1;
+
+double icp_epsilon;
+int icp_max_iters;
+bool odom_inited;
+
+int verbosity_level;
+
+// Input TF links and topics
 std::string laser_link, odom_link;
-std::string assembled_cloud_topic, map_cloud_topic, odometry_topic, path_topic, pose_topic;
+std::string robot_odom_topic, robot_odom_path_topic, assembled_cloud_topic;
 
-nav_msgs::Odometry last_odom_msg;
-nav_msgs::Path odom_path_msg;
+// ICP SLAM output topics and publishers
+std::string map_cloud_topic, icp_odom_path_topic, slam_pose_topic;
+ros::Publisher robot_odom_path_pub, estimated_pose_pub, map_cloud_pub;
+
+// ICP SLAM debug topics and publishers
+std::string prev_cloud_topic, aligned_cloud_topic;
+ros::Publisher prev_cloud_pub, aligned_cloud_pub, icp_odom_path_pub;
+
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud(new pcl::PointCloud<pcl::PointXYZ>()), curr_cloud(new pcl::PointCloud<pcl::PointXYZ>()), map_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-ros::Publisher odom_path_pub, estimated_pose_pub, map_cloud_pub;
 
-tf::Pose differenceBetweenPoses(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
+nav_msgs::Odometry last_robot_odom_msg;
+nav_msgs::Path robot_odom_path, icp_odom_path;
+
+std::vector<Eigen::Vector3f> icp_translations;
+std::vector<Eigen::Quaternionf> icp_rotations;
+
+
+
+void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
 {
-	tf::Pose tf1, tf2;
-	tf1.setOrigin(tf::Vector3(p1.position.x, p1.position.y, p1.position.z));
-	tf1.setRotation(tf::Quaternion(p1.orientation.x, p1.orientation.y, p1.orientation.z, p1.orientation.w));
-	tf2.setOrigin(tf::Vector3(p2.position.x, p2.position.y, p2.position.z));
-	tf2.setRotation(tf::Quaternion(p2.orientation.x, p2.orientation.y, p2.orientation.z, p2.orientation.w));
+	last_robot_odom_msg = *robot_odom_msg;
 
-	return tf1.inverseTimes(tf2);
-}
+	geometry_msgs::Pose curr_pose = robot_odom_msg->pose.pose;
+	int num_poses = robot_odom_path.poses.size();
 
-double lengthOfVector(tf::Pose vector)
-{
-	return vector.getOrigin().length();
-}
-
-void odometryCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
-{
-	last_odom_msg = *odom_msg;
-
-	geometry_msgs::Pose curr_pose = odom_msg->pose.pose;
-	int num_poses = odom_path_msg.poses.size();
 
 	if(num_poses > 0)
 	{
-		geometry_msgs::Pose prev_pose = odom_path_msg.poses[num_poses-1].pose;
+		geometry_msgs::Pose prev_pose = robot_odom_path.poses[num_poses-1].pose;
 		
 		double dist = lengthOfVector(differenceBetweenPoses(prev_pose, curr_pose));
 
@@ -61,58 +72,109 @@ void odometryCallback(const nav_msgs::Odometry::ConstPtr& odom_msg)
 			return;
 		}
 	}
+	else
+	{
+		icp_translations.push_back(getTranslationFromROSPose(curr_pose));
+		icp_rotations.push_back(getQuaternionFromROSPose(curr_pose));
+		odom_inited = true;
+	}
 
 	geometry_msgs::PoseStamped pose_stamped_msg;
 	pose_stamped_msg.pose = curr_pose;
-	pose_stamped_msg.header.stamp = odom_msg->header.stamp;
+	pose_stamped_msg.header.stamp = last_robot_odom_msg.header.stamp;
 	pose_stamped_msg.header.frame_id = odom_link;
-	odom_path_msg.header.stamp = ros::Time().now();
-	odom_path_msg.header.frame_id = odom_link;
-	odom_path_msg.poses.push_back(pose_stamped_msg);
-	odom_path_pub.publish(odom_path_msg);
+	robot_odom_path.header.stamp = ros::Time().now();
+	robot_odom_path.header.frame_id = odom_link;
+	robot_odom_path.poses.push_back(pose_stamped_msg);
+
+	if(icp_odom_path.poses.size() == 0)
+		icp_odom_path.poses.push_back(pose_stamped_msg);
+
+	robot_odom_path_pub.publish(robot_odom_path);
 }
 
 
 void assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
 	ROS_INFO("Cloud callback!");
-	pcl::fromROSMsg(*cloud_msg, *curr_cloud);
-	if(prev_cloud != NULL)
+	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+	pcl::fromROSMsg(*cloud_msg, *input_cloud);
+	pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
+	voxel_filter.setInputCloud(input_cloud);
+	voxel_filter.setLeafSize(0.05, 0.05, 0.05);
+	voxel_filter.filter(*curr_cloud);
+
+	if(prev_cloud->points.size() > 0)
 	{
-		if(prev_cloud->points.size() > 0)
+		// Registration
+		pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+		icp.setInputSource(prev_cloud);
+		icp.setInputTarget(curr_cloud);
+		icp.setMaximumIterations(icp_max_iters);
+		icp.setTransformationEpsilon(icp_epsilon);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+		icp.align(*aligned_cloud);
+		Eigen::Matrix4f T = icp.getFinalTransformation();
+		
+		if((icp.getFitnessScore() <= ICP_FITNESS_THRESH) && icp.hasConverged() && odom_inited)
 		{
-			// Registration
-			ROS_INFO("####   Registration");
-			pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-			int max_iters = 30;
-			icp.setInputSource(prev_cloud);
-			icp.setInputTarget(curr_cloud);
-			icp.setMaximumIterations(max_iters);
-			pcl::PointCloud<pcl::PointXYZ>::Ptr registered_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-			icp.align(*registered_cloud);
-			std::cout << "# ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " <<
-			icp.getFitnessScore() << std::endl;
-			std::cout << icp.getFinalTransformation() << std::endl;
+			Eigen::Vector3f translation = getTranslationFromTMatrix(T);
+			Eigen::Quaternionf rotation = getQuaternionFromTMatrix(T);
 
-			pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
-			voxel_filter.setInputCloud(registered_cloud);
-			voxel_filter.setLeafSize(0.05, 0.05, 0.05);
-			voxel_filter.filter(*map_cloud);
+			int num_poses = icp_translations.size();
+			Eigen::Vector3f prev_position = icp_translations[num_poses-1];
+			Eigen::Quaternionf prev_orientation = icp_rotations[num_poses-1];
 
-			sensor_msgs::PointCloud2 map_cloud_msg;
-			pcl::toROSMsg(*registered_cloud, map_cloud_msg);
-			map_cloud_msg.header.stamp = ros::Time().now();
-			map_cloud_msg.header.stamp = ros::Time().now();
-			map_cloud_msg.header.frame_id = "odom";
-			map_cloud_pub.publish(map_cloud_msg);
+			// Eigen::Vector3f curr_position = icp_translations[0] + translation;
+			// Eigen::Quaternionf curr_orientation = icp_rotations[0] * rotation;
+			Eigen::Vector3f curr_position = prev_position + translation;
+			Eigen::Quaternionf curr_orientation = prev_orientation * rotation;
+			icp_translations.push_back(curr_position);
+			icp_rotations.push_back(curr_orientation);
 
-			prev_cloud = map_cloud;
+			// Publishing for debug
+			if(verbosity_level >= 1)
+			{
+				ROS_INFO("#   Registration");
+				std::cout << "## ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
+				std::cout << T << std::endl;
+				sensor_msgs::PointCloud2 prev_cloud_msg;
+				pcl::toROSMsg(*prev_cloud, prev_cloud_msg);
+				prev_cloud_msg.header.stamp = ros::Time().now();
+				prev_cloud_msg.header.frame_id = cloud_msg->header.frame_id;
+				prev_cloud_pub.publish(prev_cloud_msg);
+
+				sensor_msgs::PointCloud2 aligned_cloud_msg;
+				pcl::toROSMsg(*aligned_cloud, aligned_cloud_msg);
+				aligned_cloud_msg.header.stamp = ros::Time().now();
+				aligned_cloud_msg.header.frame_id = cloud_msg->header.frame_id;
+				aligned_cloud_pub.publish(aligned_cloud_msg);
+				geometry_msgs::PoseStamped pose_stamped_msg;
+				pose_stamped_msg.pose = getROSPoseFromPosQuat(curr_position, curr_orientation);
+				pose_stamped_msg.header.stamp = ros::Time().now();
+				pose_stamped_msg.header.frame_id = odom_link;
+				icp_odom_path.header.stamp = ros::Time().now();
+				icp_odom_path.header.frame_id = odom_link;
+				icp_odom_path.poses.push_back(pose_stamped_msg);
+				icp_odom_path_pub.publish(icp_odom_path);
+
+				std::cout << "Initial position = " << getStringFromVector3f(icp_translations[0]) << std::endl;
+				std::cout << "Initial rotation = " << getStringFromQuaternion(icp_rotations[0]) << std::endl;
+				std::cout << "Cloud translation = " << getStringFromVector3f(translation) << std::endl;
+				std::cout << "Cloud rotation = " << getStringFromQuaternion(rotation) << std::endl;
+				std::cout << "Current position = " << getStringFromVector3f(curr_position) << std::endl;
+				std::cout << "Current rotation = " << getStringFromQuaternion(curr_orientation) << std::endl;
+				std::cout << std::endl;
+			}
 		}
-		else
-		{
-			prev_cloud = curr_cloud;
-		}
+
 	}
+	// else
+	// {
+	// 	std::cerr << "Re-setting prev_cloud" << std::endl;
+	// 	*prev_cloud = *curr_cloud;
+	// }
+	*prev_cloud = *curr_cloud;
 }
 
 int main(int argc, char** argv)
@@ -120,23 +182,45 @@ int main(int argc, char** argv)
 	ros::init(argc, argv, "icpslam");
 	ros::NodeHandle nh;
 
+	nh.param("verbosity_level", verbosity_level, 1);
+
+	// TF links
 	nh.param("odom_link", odom_link, std::string("odom"));
 	nh.param("laser_link", laser_link, std::string("laser"));
+
+	// Input odometry and point cloud topics
     nh.param("assembled_cloud_topic", assembled_cloud_topic, std::string("spinning_lidar/assembled_cloud"));
-    nh.param("map_cloud_topic", map_cloud_topic, std::string("icpslam/map"));
-	nh.param("odometry_topic", odometry_topic, std::string("/odometry/filtered"));
-	nh.param("path_topic", path_topic, std::string("icpslam/path"));
-	nh.param("pose_topic", pose_topic, std::string("icpslam/pose"));
+	nh.param("robot_odom_topic", robot_odom_topic, std::string("/odometry/filtered"));
+	nh.param("robot_odom_path_topic", robot_odom_path_topic, std::string("robot_odom_path"));
+
+	// ICP SLAM output topics
+	nh.param("icp_epsilon", icp_epsilon, 1e-06);
+	nh.param("icp_max_iters", icp_max_iters, 10);
+	nh.param("slam_pose_topic", slam_pose_topic, std::string("icpslam/pose"));
+	nh.param("map_cloud_topic", map_cloud_topic, std::string("icpslam/map"));
+
+	// ICP SLAM debug topics
+	if(verbosity_level >=1)
+	{
+		nh.param("icp_odom_path_topic", icp_odom_path_topic, std::string("icpslam/icp_odom_path"));
+		nh.param("prev_cloud_topic", prev_cloud_topic, std::string("icpslam/prev_cloud"));
+		nh.param("aligned_cloud_topic", aligned_cloud_topic, std::string("icpslam/aligned_cloud"));
+		prev_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(prev_cloud_topic, 1);
+		aligned_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(aligned_cloud_topic, 1);
+		icp_odom_path_pub = nh.advertise<nav_msgs::Path>(icp_odom_path_topic, 1);
+	}
 
 	map_cloud_pub = nh.advertise<sensor_msgs::PointCloud2>(map_cloud_topic, 1);
-	odom_path_pub = nh.advertise<nav_msgs::Path>(path_topic, 1);
-	estimated_pose_pub = nh.advertise<geometry_msgs::PoseStamped>(pose_topic, 1);
+	robot_odom_path_pub = nh.advertise<nav_msgs::Path>(robot_odom_path_topic, 1);
+	estimated_pose_pub = nh.advertise<geometry_msgs::PoseStamped>(slam_pose_topic, 1);
 
-	ros::Subscriber odometry_sub = nh.subscribe(odometry_topic, 1, odometryCallback);
+	odom_inited = false;
+
+	ros::Subscriber robot_odometry_sub = nh.subscribe(robot_odom_topic, 1, robotOdometryCallback);
 	ros::Subscriber assembled_cloud_sub = nh.subscribe(assembled_cloud_topic, 1, assembledCloudCallback);
 
 	ROS_INFO("ICP SLAM started");
-	ROS_INFO("Listening to odometry messages at %s", odometry_topic.c_str());
+	ROS_INFO("Listening to robot odometry messages at %s", robot_odom_topic.c_str());
 	ROS_INFO("Listening to assembled cloud messages at %s", assembled_cloud_topic.c_str());
 		
 	ros::spin();
