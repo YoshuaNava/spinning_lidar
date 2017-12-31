@@ -5,23 +5,6 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-
-// General
-#include <pcl_ros/impl/transforms.hpp>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/filters/voxel_grid.h>
-#include <Eigen/Dense>
-#include <Eigen/Geometry>
-#include "icpslam/geometric_utils.h"
-#include "icpslam/messaging_utils.h"
-
-
-// Odometry
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Pose.h>
@@ -32,17 +15,37 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
 
-#include "icpslam/geometric_utils.h"
-#include "icpslam/messaging_utils.h"
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
 
-// Mapping
+#include <pcl_ros/impl/transforms.hpp>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/octree/octree_search.h>
 
-
+#include "icpslam/geometric_utils.h"
+#include "icpslam/messaging_utils.h"
 
 
 // Constants for mapping
 const float OCTREE_RESOLUTION = 0.2;
+
+int verbosity_level;
+
+// Frames, topics and publishers
+std::string laser_frame, robot_frame, odom_frame, map_frame;
+std::string map_cloud_topic, assembled_cloud_topic;
+ros::Publisher map_cloud_pub;
+
+// tf handlers
+tf::TransformListener* tf_listener_ptr;
+tf::TransformBroadcaster* tf_broadcaster_ptr;
+
 // PCL clouds for mapping
 pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 pcl::octree::OctreePointCloud<pcl::PointXYZ>::Ptr map_octree(new pcl::octree::OctreePointCloudSearch<pcl::PointXYZ>(OCTREE_RESOLUTION));

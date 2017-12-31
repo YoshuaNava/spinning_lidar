@@ -59,6 +59,10 @@ target_link_libraries(lidar_scan_filtering ${catkin_LIBRARIES})
 add_executable(interrupt_laser_assembler src/utils/interrupt_laser_assembler.cpp)
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 
+
+add_executable(odometry src/icpslam/odometry.cpp)
+target_link_libraries(odometry ${catkin_LIBRARIES})
+
 add_executable(mapping src/icpslam/mapping.cpp)
 target_link_libraries(mapping ${catkin_LIBRARIES})
 

@@ -20,4 +20,6 @@
         <param name="fixed_frame" type="string" value="base_link" />
     </node>
 
+	<!-- <node name="map_tf_broadcaster" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 map odom 100" /> -->
+
 </launch>
