@@ -7,7 +7,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/"
 
 set(BUILD_TESTS FALSE)
 
-
+find_package(G2O REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     cmake_modules
     laser_assembler
@@ -20,12 +22,6 @@ find_package(catkin REQUIRED COMPONENTS
     std_msgs
     tf
 )
-
-find_package(G2O REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(PCL REQUIRED)
-
-
 catkin_package(
     DEPENDS EIGEN3 PCL
     INCLUDE_DIRS include
@@ -41,6 +37,7 @@ include_directories(
     /usr/include/suitesparse
 )
 
+LIST(APPEND LINK_LIBS ${catkin_LIBRARIES})
 LIST(APPEND LINK_LIBS
     ${G2O_CORE_LIBRARY} 
     ${G2O_STUFF_LIBRARY} 
@@ -48,11 +45,26 @@ LIST(APPEND LINK_LIBS
     ${G2O_SOLVER_CSPARSE} 
     ${G2O_SOLVER_DENSE}
     ${G2O_SOLVER_PCG} 
-    ${G2O_TYPES_SBA} cholmod cxsparse
-  )
-LIST(APPEND SOURCEFILES src/bundle_adjustment.cpp)
+    ${G2O_TYPES_ICP}
+    ${G2O_TYPES_SLAM3D}
+    ${G2O_TYPES_SBA}
+    cholmod cxsparse
+)
 
 
+## Build library from icpslam source files
+LIST(APPEND SOURCEFILES
+    src/utils/geometric_utils.cpp
+    src/utils/messaging_utils.cpp
+    src/icpslam/icp_odometer.cpp
+    src/icpslam/loop_closure_handler.cpp
+)
+add_library(${PROJECT_NAME} ${SOURCEFILES})
+target_link_libraries(${PROJECT_NAME}
+  ${LINK_LIBS}
+)
+
+## Utils for handling the spinning lidar point clouds
 add_executable(lidar_scan_filtering src/utils/lidar_scan_filtering.cpp)
 target_link_libraries(lidar_scan_filtering ${catkin_LIBRARIES})
 
@@ -60,11 +72,13 @@ add_executable(interrupt_laser_assembler src/utils/interrupt_laser_assembler.cpp
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 
 
-add_executable(odometry src/icpslam/odometry.cpp)
-target_link_libraries(odometry ${catkin_LIBRARIES})
+
+## ICP SLAM
+add_executable(icpslam src/icpslam/icpslam.cpp)
+target_link_libraries(icpslam ${catkin_LIBRARIES} ${PROJECT_NAME})
 
 add_executable(mapping src/icpslam/mapping.cpp)
-target_link_libraries(mapping ${catkin_LIBRARIES})
+target_link_libraries(mapping ${catkin_LIBRARIES} ${PROJECT_NAME})
 
 
 if(BUILD_TESTS)

@@ -1,18 +1,23 @@
 
-#ifndef MESSAGING_UTILS_H
-#define MESSAGING_UTILS_H
 
+#include <ros/ros.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <tf/transform_datatypes.h>
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
-#include "icpslam/geometric_utils.h"
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl_ros/impl/transforms.hpp>
+#include <pcl_conversions/pcl_conversions.h>
 
+#include "utils/geometric_utils.h"
+#include "utils/messaging_utils.h"
 
 
 void insertPoseInPath(Eigen::Vector3f position, Eigen::Quaternionf orientation, std::string frame_id, ros::Time stamp, nav_msgs::Path &path)
@@ -66,5 +71,3 @@ void publishPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string fr
 	cloud_msg.header.frame_id = frame_id;
 	pub_ptr->publish(cloud_msg);
 }
-
-#endif

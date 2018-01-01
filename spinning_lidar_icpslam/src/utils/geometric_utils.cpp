@@ -7,6 +7,13 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
+#include "utils/geometric_utils.h"
+
+struct Pose6DOF
+{
+	Eigen::Vector3f pos;
+	Eigen::Quaternionf rot;
+};
 
 tf::Transform getTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
 {
