@@ -111,9 +111,11 @@ Pose6DOF ICPOdometer::getLatestPoseICPOdometry()
 
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
 {
+	// ROS_INFO("Robot odometry callback!");
 	Pose6DOF pose;
 	pose.pos = getTranslationFromROSPose(robot_odom_msg->pose.pose);
 	pose.rot = getQuaternionFromROSPose(robot_odom_msg->pose.pose);
+	pose.cov = getCovarianceFromROSPoseWithCovariance(robot_odom_msg->pose);
 	robot_odom_poses_.push_back(pose);
 
 	int num_poses = robot_odom_path_.poses.size();
@@ -135,7 +137,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(verbosity_level_ >= 1)
 	{
-		std::cout << "Robot odometry position = " << getStringFromVector3f(pose.pos) << std::endl;
+		std::cout << "Robot odometry position = " << getStringFromVector3d(pose.pos) << std::endl;
 		std::cout << "Robot odometry rotation = " << getStringFromQuaternion(pose.rot) << std::endl;
 	}
 
@@ -162,14 +164,15 @@ void ICPOdometer::mapTransformCallback(const ros::TimerEvent&)
 
 void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
 {
-		Eigen::Vector3f t = getTranslationFromTMatrix(T);
-		Eigen::Quaternionf q = getQuaternionFromTMatrix(T);
+	// ROS_INFO("ICP odometry update!");
+	Eigen::Vector3d t = getTranslationFromTMatrix(T);
+	Eigen::Quaterniond q = getQuaternionFromTMatrix(T);
 
-		Pose6DOF prev_pose = getLatestPoseICPOdometry();
-		Pose6DOF new_pose;
-		new_pose.pos = prev_pose.pos + prev_pose.rot.toRotationMatrix() * t;
-		new_pose.rot = prev_pose.rot * q;
-		new_pose.rot.normalize();
+	Pose6DOF prev_pose = getLatestPoseICPOdometry();
+	Pose6DOF new_pose;
+	new_pose.pos = prev_pose.pos + prev_pose.rot.toRotationMatrix() * t;
+	new_pose.rot = prev_pose.rot * q;
+	new_pose.rot.normalize();
 
 	// double dist = (prev_pos - curr_pos).norm();
 	// if(dist < POSE_DIST_THRESH)
@@ -182,13 +185,13 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
 		icp_odom_path__pub_.publish(icp_odom_path_);
 	}
 
-	if(verbosity_level_ >= 1)
+	if(verbosity_level_ >= 2)
 	{
-		std::cout << "Initial position = " << getStringFromVector3f(icp_odom_poses_[0].pos) << std::endl;
+		std::cout << "Initial position = " << getStringFromVector3d(icp_odom_poses_[0].pos) << std::endl;
 		std::cout << "Initial rotation = " << getStringFromQuaternion(icp_odom_poses_[0].rot) << std::endl;
-		std::cout << "Cloud translation = " << getStringFromVector3f(t) << std::endl;
+		std::cout << "Cloud translation = " << getStringFromVector3d(t) << std::endl;
 		std::cout << "Cloud rotation = " << getStringFromQuaternion(q) << std::endl;
-		std::cout << "ICP odometry position = " << getStringFromVector3f(new_pose.pos) << std::endl;
+		std::cout << "ICP odometry position = " << getStringFromVector3d(new_pose.pos) << std::endl;
 		std::cout << "ICP odometry rotation = " << getStringFromQuaternion(new_pose.rot) << std::endl;
 		std::cout << std::endl;
 	}
@@ -196,7 +199,7 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
 
 void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-	ROS_INFO("Cloud callback!");
+	// ROS_INFO("Cloud callback!");
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);
 	pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
@@ -228,9 +231,9 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 			// Publishing for debug
 			if(verbosity_level_ >= 1)
 			{
-				ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
-				ROS_INFO("##   Registration");
-				std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
+				// ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
+				// ROS_INFO("##   Registration");
+				// std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
 				std::cout << T << std::endl;
 				
 				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud__pub_);

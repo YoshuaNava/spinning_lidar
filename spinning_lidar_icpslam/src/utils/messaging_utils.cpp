@@ -20,7 +20,7 @@
 #include "utils/messaging_utils.h"
 
 
-void insertPoseInPath(Eigen::Vector3f position, Eigen::Quaternionf orientation, std::string frame_id, ros::Time stamp, nav_msgs::Path &path)
+void insertPoseInPath(Eigen::Vector3d position, Eigen::Quaterniond orientation, std::string frame_id, ros::Time stamp, nav_msgs::Path &path)
 {
 	geometry_msgs::PoseStamped pose_stamped_msg;
 	pose_stamped_msg.pose = getROSPoseFromPosQuat(position, orientation);
@@ -38,7 +38,7 @@ void insertPoseInPath(geometry_msgs::Pose pose, std::string frame_id, ros::Time 
 	path.poses.push_back(pose_stamped_msg);
 }
 
-void publishOdometry(Eigen::Vector3f position, Eigen::Quaternionf orientation, std::string ref_frame, std::string robot_frame, ros::Time stamp, ros::Publisher* pub_ptr)
+void publishOdometry(Eigen::Vector3d position, Eigen::Quaterniond orientation, std::string ref_frame, std::string robot_frame, ros::Time stamp, ros::Publisher* pub_ptr)
 {
 	nav_msgs::Odometry odom_msg;
 	odom_msg.header.stamp = stamp;

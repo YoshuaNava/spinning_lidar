@@ -21,11 +21,11 @@
 #include "utils/geometric_utils.h"
 
 
-void insertPoseInPath(Eigen::Vector3f position, Eigen::Quaternionf orientation, std::string frame_id, ros::Time stamp, nav_msgs::Path &path);
+void insertPoseInPath(Eigen::Vector3d position, Eigen::Quaterniond orientation, std::string frame_id, ros::Time stamp, nav_msgs::Path &path);
 
 void insertPoseInPath(geometry_msgs::Pose pose, std::string frame_id, ros::Time stamp, nav_msgs::Path &path);
 
-void publishOdometry(Eigen::Vector3f position, Eigen::Quaternionf orientation, std::string ref_frame, std::string robot_frame, ros::Time stamp, ros::Publisher* pub_ptr);
+void publishOdometry(Eigen::Vector3d position, Eigen::Quaterniond orientation, std::string ref_frame, std::string robot_frame, ros::Time stamp, ros::Publisher* pub_ptr);
 
 void publishPointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string frame_id, ros::Time stamp, ros::Publisher* pub_ptr);
 

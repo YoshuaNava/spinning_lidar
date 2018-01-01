@@ -57,7 +57,7 @@ LIST(APPEND SOURCEFILES
     src/utils/geometric_utils.cpp
     src/utils/messaging_utils.cpp
     src/icpslam/icp_odometer.cpp
-    src/icpslam/loop_closure_handler.cpp
+    src/icpslam/pose_optimizer.cpp
 )
 add_library(${PROJECT_NAME} ${SOURCEFILES})
 target_link_libraries(${PROJECT_NAME}

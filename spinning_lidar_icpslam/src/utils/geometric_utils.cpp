@@ -2,6 +2,7 @@
 #ifndef GEOMETRIC_UTILS_H
 #define GEOMETRIC_UTILS_H
 
+#include <geometry_msgs/PoseWithCovariance.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_datatypes.h>
 #include <Eigen/Dense>
@@ -9,11 +10,13 @@
 
 #include "utils/geometric_utils.h"
 
-struct Pose6DOF
+
+// Reference: https://github.com/ethz-asl/ethzasl_msf/blob/master/msf_eval/src/msf_eval.cpp
+Eigen::Matrix<double, 6, 6> getCovarianceFromROSPoseWithCovariance(geometry_msgs::PoseWithCovariance pose_msg)
 {
-	Eigen::Vector3f pos;
-	Eigen::Quaternionf rot;
-};
+	double* cov_arr = pose_msg.covariance.data();
+	return Eigen::Matrix<double, 6, 6>(cov_arr);
+}
 
 tf::Transform getTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
 {
@@ -29,7 +32,7 @@ tf::Transform getInverseTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
 	return getTFTransformFromROSOdometry(odom_msg).inverse();
 }
 
-tf::Transform getTFTransformFromPositionQuaternion(Eigen::Vector3f pos, Eigen::Quaternionf q)
+tf::Transform getTFTransformFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond q)
 {
 	tf::Transform transform;
 	transform.setOrigin(tf::Vector3(pos(0), pos(1), pos(2)));
@@ -37,7 +40,7 @@ tf::Transform getTFTransformFromPositionQuaternion(Eigen::Vector3f pos, Eigen::Q
 	return transform;
 }
 
-tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3f pos, Eigen::Quaternionf q)
+tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond q)
 {
 	tf::Pose pose;
 	pose.setOrigin(tf::Vector3(pos(0), pos(1), pos(2)));
@@ -45,20 +48,20 @@ tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3f pos, Eigen::Quaternionf
 	return pose;
 }
 
-Eigen::Vector3f getTranslationFromTMatrix(Eigen::Matrix4f &T)
+Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4f &T)
 {
-	Eigen::Vector3f translation(-T(0,3), -T(1,3), -T(2,3));
+	Eigen::Vector3d translation(-T(0,3), -T(1,3), -T(2,3));
 	return translation;
 }
 
-Eigen::Quaternionf getQuaternionFromTMatrix(Eigen::Matrix4f &T)
+Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4f &T)
 {
-	Eigen::Matrix3f rot = T.block(0, 0, 3, 3).transpose();
-	Eigen::Quaternionf q(rot);
+	Eigen::Matrix3d rot = T.block(0, 0, 3, 3).transpose().cast<double>();
+	Eigen::Quaterniond q(rot);
 	return q;
 }
 
-geometry_msgs::Pose getROSPoseFromPosQuat(Eigen::Vector3f pos, Eigen::Quaternionf q)
+geometry_msgs::Pose getROSPoseFromPosQuat(Eigen::Vector3d pos, Eigen::Quaterniond q)
 {
 	geometry_msgs::Pose pose;
 	pose.position.x = pos(0);
@@ -71,15 +74,15 @@ geometry_msgs::Pose getROSPoseFromPosQuat(Eigen::Vector3f pos, Eigen::Quaternion
 	return pose;
 }
 
-Eigen::Vector3f getTranslationFromROSPose(geometry_msgs::Pose pose)
+Eigen::Vector3d getTranslationFromROSPose(geometry_msgs::Pose pose)
 {
-	Eigen::Vector3f translation(pose.position.x, pose.position.y, pose.position.z);
+	Eigen::Vector3d translation(pose.position.x, pose.position.y, pose.position.z);
 	return translation;
 }
 
-Eigen::Quaternionf getQuaternionFromROSPose(geometry_msgs::Pose pose)
+Eigen::Quaterniond getQuaternionFromROSPose(geometry_msgs::Pose pose)
 {
-	Eigen::Quaternionf q;
+	Eigen::Quaterniond q;
 	q.x() = pose.orientation.x;
 	q.y() = pose.orientation.y;
 	q.z() = pose.orientation.z;
@@ -88,7 +91,7 @@ Eigen::Quaternionf getQuaternionFromROSPose(geometry_msgs::Pose pose)
 }
 
 
-std::string getStringFromVector3f(Eigen::Vector3f vector)
+std::string getStringFromVector3d(Eigen::Vector3d vector)
 {
 	std::string output = "(";
 	output += std::to_string(vector(0)) + ", ";
@@ -98,7 +101,7 @@ std::string getStringFromVector3f(Eigen::Vector3f vector)
 	return output;
 }
 
-std::string getStringFromQuaternion(Eigen::Quaternionf q)
+std::string getStringFromQuaternion(Eigen::Quaterniond q)
 {
 	std::string output = "(";
 	output += std::to_string(q.x()) + ", ";

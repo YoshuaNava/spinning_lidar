@@ -14,18 +14,20 @@
 #include <Eigen/Geometry>
 #include <Eigen/StdVector>
 #include "g2o/core/sparse_optimizer.h"
+#include "g2o/types/icp/types_icp.h"
+#include "g2o/types/slam3d/types_slam3d.h"
 
-class LoopClosureHandler
+class PoseOptimizer
 {
 private:
     typedef ros::Time TimeStamp;
     typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-    uint curr_key_;
+    uint curr_vertex_key_, curr_edge_key_;
     std::map<u_int, TimeStamp> graph_stamps_;
     std::map<u_int, PointCloud> graph_scans_;
     std::map<u_int, Pose6DOF> graph_poses_;
-    g2o::SparseOptimizer optimizer;
+    g2o::SparseOptimizer* optimizer_;
 
     ros::NodeHandle nh_;
     ros::Publisher pose_graph_pub;
@@ -40,7 +42,7 @@ private:
 
 public:
 
-    LoopClosureHandler(ros::NodeHandle nh);
+    PoseOptimizer(ros::NodeHandle nh);
 
     void init();
 
@@ -48,9 +50,9 @@ public:
 
     void advertisePublishers();
 
-    void addNewKeyscan(PointCloud new_cloud, TimeStamp stamp, uint *key);
+    void addNewVertex(PointCloud new_cloud, Pose6DOF pose, TimeStamp stamp, bool is_keyframe, uint *key);
 
-    void addNewPose(Pose6DOF pose, TimeStamp stamp, uint *key);
+    void addNewEdge(Pose6DOF pose, TimeStamp stamp, uint vertex1_key, uint vertex2_key, uint *key);
 
     bool checkLoopClosure();
 

@@ -1,7 +1,7 @@
 
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
-#include "icpslam/loop_closure_handler.h"
+#include "icpslam/pose_optimizer.h"
 
 #include <random>
 #include <iostream>
@@ -38,27 +38,34 @@
 #include "g2o/core/optimization_algorithm_levenberg.h"
 #include "g2o/solvers/dense/linear_solver_dense.h"
 #include "g2o/types/icp/types_icp.h"
+#include "g2o/types/slam3d/types_slam3d.h"
 
 
-LoopClosureHandler::LoopClosureHandler(ros::NodeHandle nh) :
+PoseOptimizer::PoseOptimizer(ros::NodeHandle nh) :
     nh_(nh)
 {
     init();
 }
 
-void LoopClosureHandler::init()
+void PoseOptimizer::init()
 {
-    curr_key_ = 0;
+    curr_vertex_key_ = 0;
+    curr_edge_key_ = 0;
     graph_stamps_.clear();
     graph_scans_.clear();
     graph_poses_.clear();
-    optimizer.setVerbose(true);
+
+    optimizer_ = new g2o::SparseOptimizer();
+    g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
+        g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
+    optimizer_->setAlgorithm(solver);
+    optimizer_->setVerbose(true);
 
     namespace_ = "icpslam";
     advertisePublishers();
 }
 
-void LoopClosureHandler::setGraphMarkersProperties()
+void PoseOptimizer::setGraphMarkersProperties()
 {
     vertex_color_.r = 0;
     vertex_color_.g = 0;
@@ -78,72 +85,69 @@ void LoopClosureHandler::setGraphMarkersProperties()
     markers_scale_.z = 0.1;
 }
 
-void LoopClosureHandler::advertisePublishers()
+void PoseOptimizer::advertisePublishers()
 {
     pose_graph_pub = nh_.advertise<visualization_msgs::Marker>(pose_graph_topic, 1);
     setGraphMarkersProperties();
 }
 
-void LoopClosureHandler::addNewKeyscan(PointCloud new_cloud, TimeStamp stamp, uint *key)
+/* Inspired on mrsmap by Jurg Stuckler */
+void PoseOptimizer::addNewVertex(PointCloud new_cloud, Pose6DOF pose, TimeStamp stamp, bool is_keyframe, uint *key)
 {
-    *key = curr_key_;
+    *key = curr_vertex_key_;
     graph_stamps_.insert(std::pair<unsigned int, ros::Time>(*key, stamp));
-    graph_scans_.insert(std::pair<unsigned int, PointCloud>(*key, new_cloud));
-    curr_key_++;
+
+    if(is_keyframe)
+        graph_scans_.insert(std::pair<unsigned int, PointCloud>(*key, new_cloud));
+
+    g2o::VertexSE3* v = new g2o::VertexSE3();
+    v->setId(*key);
+    g2o::SE3Quat se3_pose(pose.rot, pose.pos);
+
+    if(curr_vertex_key_ == 0)
+    {
+        v->setEstimate(g2o::SE3Quat());
+        // v->setEstimate( se3_pose );
+        v->setFixed(true);
+    }
+    else
+    {
+        v->setEstimate( se3_pose );
+    }
+    optimizer_->addVertex( v );
+
+    curr_vertex_key_++;
 }
 
-void LoopClosureHandler::addNewPose(Pose6DOF pose, TimeStamp stamp, uint *key)
+void PoseOptimizer::addNewEdge(Pose6DOF pose, TimeStamp stamp, uint vertex1_key, uint vertex2_key, uint *key)
 {
-    *key = curr_key_;
+    *key = curr_edge_key_;
     graph_stamps_.insert(std::pair<unsigned int, ros::Time>(*key, stamp));
     graph_poses_.insert(std::pair<unsigned int, Pose6DOF>(*key, pose));
-    curr_key_++;
+
+    g2o::SE3Quat se3_pose(pose.rot, pose.pos);
+	Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
+
+	g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex1_key ) );
+	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
+
+	g2o::EdgeSE3* edge = new g2o::EdgeSE3();
+	edge->vertices()[0] = vertex1;
+	edge->vertices()[1] = vertex2;
+	edge->setMeasurement( se3_pose );
+	edge->setInformation( meas_info );
+    optimizer_->addEdge( edge );
+
+    curr_edge_key_++;
 }
 
-bool LoopClosureHandler::checkLoopClosure()
+bool PoseOptimizer::checkLoopClosure()
 {
-    // g2o::SparseOptimizer optimizer;
-    // optimizer.setVerbose(true);
-    // optimizer.setVerbose(false);
 
-    g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-        g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
-
-    uint vertex_id = 0;
-
-    // set up two poses
-    for (size_t i=0; i<2; ++i)
-    {
-        // set up rotation and translation for this node
-        Eigen::Vector3d t(0,0,i);
-        Eigen::Quaterniond q;
-        q.setIdentity();
-
-        Eigen::Isometry3d cam; // camera pose
-        cam = q;
-        cam.translation() = t;
-
-        // set up node
-        g2o::VertexSE3 *vc = new g2o::VertexSE3();
-        vc->setEstimate(cam);
-
-        vc->setId(vertex_id);      // vertex id
-
-        std::cerr << t.transpose() << " | " << q.coeffs().transpose() << std::endl;
-
-        // set first cam pose fixed
-        if (i==0)
-            vc->setFixed(true);
-
-        // add to optimizer
-        optimizer.addVertex(vc);
-
-        vertex_id++;             
-    }
 }
 
 
-void LoopClosureHandler::publishPoseGraphMarkers()
+void PoseOptimizer::publishPoseGraphMarkers()
 {
     visualization_msgs::Marker marker;
     marker.header.frame_id = "odom";
