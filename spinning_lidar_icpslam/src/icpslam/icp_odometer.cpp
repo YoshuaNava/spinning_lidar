@@ -55,7 +55,7 @@ void ICPOdometer::init()
 
 void ICPOdometer::loadParameters()
 {
-	nh_.param("verbosity_level_", verbosity_level_, 0);
+	nh_.param("verbosity_level_", verbosity_level_, 1);
 
 	// TF frames
 	nh_.param("map_frame", map_frame_, std::string("map"));
@@ -71,7 +71,7 @@ void ICPOdometer::loadParameters()
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
 	{
-		nh_.param("prev_cloud_topic", prev_cloud_topic_, std::string("icpslam/prev_cloud_"));
+		nh_.param("prev_cloud_topic", prev_cloud_topic_, std::string("icpslam/prev_cloud"));
 		nh_.param("aligned_cloud_topic", aligned_cloud_topic_, std::string("icpslam/aligned_cloud"));
 
 		nh_.param("icp_odom_topic", icp_odom_topic_, std::string("icpslam/odom"));
@@ -152,7 +152,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		insertPoseInPath(robot_odom_msg->pose.pose, odom_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
 	}
 
-	if(verbosity_level_ >= 1)
+	if(verbosity_level_ >= 2)
 	{
 		std::cout << "Robot odometry position = " << getStringFromVector3d(pose.pos) << std::endl;
 		std::cout << "Robot odometry rotation = " << getStringFromQuaternion(pose.rot) << std::endl;

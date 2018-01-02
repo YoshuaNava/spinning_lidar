@@ -10,12 +10,43 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
-struct Pose6DOF
+class Pose6DOF
 {
+public:
 	ros::Time time_stamp;
 	Eigen::Vector3d pos;
 	Eigen::Quaterniond rot;
 	Eigen::Matrix<double, 6, 6> cov;
+
+	Pose6DOF()
+	{
+		pos = Eigen::Vector3d(0,0,0);
+		rot = Eigen::Quaterniond(0,0,0,1);
+		cov = Eigen::MatrixXd::Zero(6,6);
+	}
+
+	Pose6DOF& operator =(Pose6DOF pose)
+	{
+		this->time_stamp = pose.time_stamp;
+		this->pos(0) = pose.pos(0);
+		this->pos(1) = pose.pos(1);
+		this->pos(2) = pose.pos(2);
+
+		this->rot.x() = pose.rot.x();
+		this->rot.y() = pose.rot.y();
+		this->rot.z() = pose.rot.z();
+		this->rot.w() = pose.rot.w();
+		this->cov = pose.cov;
+		
+		return *this;
+	}
+
+	bool operator ==(const Pose6DOF &pose)
+	{
+		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
+	}
+private:
+	const double EQUALITY_THRESH = 1e-10;
 };
 
 geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose);

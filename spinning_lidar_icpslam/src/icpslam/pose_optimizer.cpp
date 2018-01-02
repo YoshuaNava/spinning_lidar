@@ -37,8 +37,11 @@
 #include "g2o/core/solver.h"
 #include "g2o/core/optimization_algorithm_levenberg.h"
 #include "g2o/solvers/dense/linear_solver_dense.h"
+#include "g2o/solvers/csparse/linear_solver_csparse.h"
+#include "g2o/solvers/cholmod/linear_solver_cholmod.h"
 #include "g2o/types/icp/types_icp.h"
 #include "g2o/types/slam3d/types_slam3d.h"
+
 
 
 PoseOptimizer::PoseOptimizer(ros::NodeHandle nh) :
@@ -56,8 +59,10 @@ void PoseOptimizer::init()
     graph_poses_.clear();
 
     optimizer_ = new g2o::SparseOptimizer();
+
     g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
         g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
+
     optimizer_->setAlgorithm(solver);
     optimizer_->setVerbose(true);
 
@@ -102,14 +107,14 @@ void PoseOptimizer::setGraphMarkersProperties()
     keyframes_color_.b = 0;
     keyframes_color_.a = 1;
 
-    keyframes_scale_.x = 0.3;
-    keyframes_scale_.y = 0.3;
-    keyframes_scale_.z = 0.3;
+    keyframes_scale_.x = 0.15;
+    keyframes_scale_.y = 0.15;
+    keyframes_scale_.z = 0.15;
     vertex_scale_.x = 0.05;
     vertex_scale_.y = 0.05;
     vertex_scale_.z = 0.05;
     closure_edge_scale_.x = 0.05;
-    odom_edge_scale_.x = 0.01;
+    odom_edge_scale_.x = 0.05;
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */
@@ -128,8 +133,8 @@ void PoseOptimizer::addNewVertex(PointCloud new_cloud, Pose6DOF pose, bool is_ke
 
     if(curr_vertex_key_ == 0)
     {
-        v->setEstimate(g2o::SE3Quat());
-        // v->setEstimate( se3_pose );
+        // v->setEstimate(g2o::SE3Quat());
+        v->setEstimate( se3_pose );
         v->setFixed(true);
     }
     else
@@ -145,22 +150,32 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
 {
     *key = curr_edge_key_;
     graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
-    graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
     std::pair<uint, uint> edge_keys(vertex1_key, vertex2_key);
     graph_edges_.insert(std::pair<uint, std::pair<uint, uint>>(*key, edge_keys));
+    // graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
 
     g2o::SE3Quat se3_pose(pose.rot, pose.pos);
 	Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
+    // std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
+    // std::cout << "se3_pose:\n" << se3_pose << std::endl;
+    // std::cout << "Covariance:\n" << pose.cov << std::endl;
 
 	g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex1_key ) );
 	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
+    // std::cout << "Vertex1:\n" << vertex1 << std::endl;
+    // std::cout << "Vertex2:\n" << vertex2 << std::endl;
 
 	g2o::EdgeSE3* edge = new g2o::EdgeSE3();
 	edge->vertices()[0] = vertex1;
 	edge->vertices()[1] = vertex2;
 	edge->setMeasurement( se3_pose );
 	edge->setInformation( meas_info );
-    optimizer_->addEdge( edge );
+    bool result = optimizer_->addEdge( edge );
+    
+    // if(result)
+    //     std::cout << "Successfully added edge" << std::endl;
+    // else
+    //     std::cout << "Error adding edge" << std::endl;
 
     curr_edge_key_++;
 }
@@ -182,13 +197,16 @@ bool PoseOptimizer::optimizeGraph()
         return false;
     }
 
-    ROS_ERROR("Pose graph optimization finished after %i iterations.", iters);
+    ROS_INFO("Pose graph optimization finished after %i iterations.", iters);
+    std::cout << optimizer_->vertices().size() << " nodes, "
+			<< optimizer_->edges().size() << " edges, "
+			<< "chi2: " << optimizer_->chi2() << "\n";
     return true;
 }
 
 bool PoseOptimizer::checkLoopClosure()
 {
-
+    return false;
 }
 
 void PoseOptimizer::publishPoseGraphMarkers()
@@ -213,8 +231,8 @@ void PoseOptimizer::publishPoseGraphMarkers()
 
     for (size_t i = 0; i < curr_edge_key_; ++i)
     {
-        unsigned int vertex_key1 = graph_edges_.at(i).first;
-        unsigned int vertex_key2 = graph_edges_.at(i).second;
+        uint vertex_key1 = graph_edges_.at(i).first;
+        uint vertex_key2 = graph_edges_.at(i).second;
 
         geometry_msgs::Point point1, point2;
         point1 = getROSPointFromPose6DOF(graph_poses_.at(vertex_key1));
