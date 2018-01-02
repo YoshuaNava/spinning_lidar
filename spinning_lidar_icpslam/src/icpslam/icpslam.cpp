@@ -73,7 +73,12 @@ int main(int argc, char** argv)
 			if(run_pose_optimization)
 			{
 				ROS_INFO("***** Graph pose optimization");
-				bool result = pose_optimizer.optimizeGraph();
+				bool success = pose_optimizer.optimizeGraph();
+
+				if(success)
+				{
+					pose_optimizer.refineVertices();
+				}
 				run_pose_optimization = false;
 			}
 

@@ -75,6 +75,13 @@ void PoseOptimizer::init()
 
 void PoseOptimizer::loadParameters()
 {
+    nh_.param("verbosity_level_", verbosity_level_, 1);
+
+	nh_.param("map_frame", map_frame_, std::string("map"));
+	nh_.param("odom_frame", odom_frame_, std::string("odom"));
+	nh_.param("robot_frame", robot_frame_, std::string("base_link"));
+	nh_.param("laser_frame", laser_frame_, std::string("laser"));
+
 	nh_.param("graph_edges_topic", graph_edges_topic_, std::string("icpslam/graph_edges"));
     nh_.param("graph_vertices_topic", graph_vertices_topic_, std::string("icpslam/graph_vertices"));
     nh_.param("graph_keyframes_topic", graph_keyframes_topic_, std::string("icpslam/graph_keyframes"));
@@ -82,6 +89,8 @@ void PoseOptimizer::loadParameters()
 
 void PoseOptimizer::advertisePublishers()
 {
+    tf::TransformBroadcaster tf_broadcaster;
+	tf_broadcaster_ptr_ = &tf_broadcaster;
     graph_edges_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_edges_topic_, 1);
     graph_vertices_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_vertices_topic_, 1);
     graph_keyframes_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_keyframes_topic_, 1);
@@ -149,9 +158,6 @@ void PoseOptimizer::addNewVertex(PointCloud new_cloud, Pose6DOF pose, bool is_ke
 void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key)
 {
     *key = curr_edge_key_;
-    graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
-    std::pair<uint, uint> edge_keys(vertex1_key, vertex2_key);
-    graph_edges_.insert(std::pair<uint, std::pair<uint, uint>>(*key, edge_keys));
     // graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
 
     g2o::SE3Quat se3_pose(pose.rot, pose.pos);
@@ -170,12 +176,18 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
 	edge->vertices()[1] = vertex2;
 	edge->setMeasurement( se3_pose );
 	edge->setInformation( meas_info );
-    bool result = optimizer_->addEdge( edge );
+
+    bool success = optimizer_->addEdge( edge );
     
-    // if(result)
-    //     std::cout << "Successfully added edge" << std::endl;
-    // else
-    //     std::cout << "Error adding edge" << std::endl;
+    if(!success)
+    {
+        ROS_ERROR("Error adding edge between vertices %d and %d", vertex1_key, vertex2_key);
+        return;
+    }
+
+    graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
+    std::pair<uint, uint> edge_keys(vertex1_key, vertex2_key);
+    graph_edges_.insert(std::pair<uint, std::pair<uint, uint>>(*key, edge_keys));
 
     curr_edge_key_++;
 }
@@ -201,8 +213,41 @@ bool PoseOptimizer::optimizeGraph()
     std::cout << optimizer_->vertices().size() << " nodes, "
 			<< optimizer_->edges().size() << " edges, "
 			<< "chi2: " << optimizer_->chi2() << "\n";
+
+    // g2o::VertexSE3* v_ref_old = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( keyFrames_[oldReferenceId_]->nodeId_ ) );
+	// Eigen::Matrix4d pose_ref_old = v_ref_old->estimate().matrix();
+	// Eigen::Matrix4d tracked_pose = pose_ref_old * lastTransform_;
     return true;
 }
+
+
+void PoseOptimizer::refineVertices()
+{
+    for(size_t v_id=0; v_id<optimizer_->vertices().size() ;v_id++)
+    {
+        g2o::VertexSE3* v = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( v_id ) );
+        Eigen::Matrix4d v_T = v->estimate().matrix();
+        Pose6DOF v_pose(v_T);
+        graph_poses_.find(v_id)->second = v_pose;
+    }
+}
+
+Pose6DOF PoseOptimizer::getLatestPose()
+{
+    return graph_poses_.find(curr_vertex_key_-1)->second;
+}
+
+void PoseOptimizer::publishMapTransform()
+{
+    Pose6DOF pose = getLatestPose();
+
+    // Publish transform between odom and map
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(pose.pos(0), pose.pos(1), pose.pos(2)) );
+    transform.setRotation( tf::Quaternion(pose.rot.x(), pose.rot.y(), pose.rot.z(), pose.rot.w()) );				
+    tf_broadcaster_ptr_->sendTransform(tf::StampedTransform(transform, ros::Time::now(), map_frame_, odom_frame_));
+}
+
 
 bool PoseOptimizer::checkLoopClosure()
 {

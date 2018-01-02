@@ -8,6 +8,7 @@
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/ColorRGBA.h>
 #include <visualization_msgs/Marker.h>
+#include <tf/transform_broadcaster.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <Eigen/Dense>
@@ -23,6 +24,8 @@ private:
     typedef ros::Time TimeStamp;
     typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
+    int verbosity_level_;
+
     uint curr_vertex_key_, curr_edge_key_;
     std::map<uint, TimeStamp> graph_stamps_;
     std::map<uint, PointCloud> graph_scans_;
@@ -32,6 +35,8 @@ private:
     int pose_opt_iters;
 
     ros::NodeHandle nh_;
+    tf::TransformBroadcaster* tf_broadcaster_ptr_;
+    std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
     ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_;
     std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_;
 
@@ -62,6 +67,12 @@ public:
     void addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key);
 
     bool optimizeGraph();
+
+    void refineVertices();
+
+    Pose6DOF getLatestPose();
+
+    void publishMapTransform();
 
     bool checkLoopClosure();
 

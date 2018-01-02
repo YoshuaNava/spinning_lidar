@@ -25,6 +25,11 @@ public:
 		cov = Eigen::MatrixXd::Zero(6,6);
 	}
 
+	Pose6DOF(Eigen::Matrix4d &T)
+	{
+		this->fromTMatrix(T);
+	}
+
 	Pose6DOF& operator =(Pose6DOF pose)
 	{
 		this->time_stamp = pose.time_stamp;
@@ -39,6 +44,13 @@ public:
 		this->cov = pose.cov;
 		
 		return *this;
+	}
+
+	void fromTMatrix(Eigen::Matrix4d &T)
+	{
+		this->pos = Eigen::Vector3d(-T(0,3), -T(1,3), -T(2,3));
+		Eigen::Matrix3d rot = T.block(0, 0, 3, 3).transpose().cast<double>();
+		this->rot = Eigen::Quaterniond(rot);
 	}
 
 	bool operator ==(const Pose6DOF &pose)

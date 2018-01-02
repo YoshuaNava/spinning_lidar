@@ -66,7 +66,7 @@ void ICPOdometer::loadParameters()
 	// Input robot odometry and point cloud topics
 	nh_.param("assembled_cloud_topic", assembled_cloud_topic_, std::string("spinning_lidar/assembled_cloud"));
 	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
-	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("robot_odom_path"));
+	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
