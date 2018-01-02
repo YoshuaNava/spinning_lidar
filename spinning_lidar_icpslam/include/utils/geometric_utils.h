@@ -2,6 +2,8 @@
 #ifndef GEOMETRIC_UTILS_H
 #define GEOMETRIC_UTILS_H
 
+#include <ros/ros.h>
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseWithCovariance.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_datatypes.h>
@@ -10,10 +12,13 @@
 
 struct Pose6DOF
 {
+	ros::Time time_stamp;
 	Eigen::Vector3d pos;
 	Eigen::Quaterniond rot;
 	Eigen::Matrix<double, 6, 6> cov;
 };
+
+geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose);
 
 Eigen::Matrix<double, 6, 6> getCovarianceFromROSPoseWithCovariance(geometry_msgs::PoseWithCovariance pose_msg);
 

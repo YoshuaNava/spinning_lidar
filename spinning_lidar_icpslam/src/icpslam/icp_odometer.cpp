@@ -55,7 +55,7 @@ void ICPOdometer::init()
 
 void ICPOdometer::loadParameters()
 {
-	nh_.param("verbosity_level_", verbosity_level_, 2);
+	nh_.param("verbosity_level_", verbosity_level_, 0);
 
 	// TF frames
 	nh_.param("map_frame", map_frame_, std::string("map"));
@@ -66,31 +66,31 @@ void ICPOdometer::loadParameters()
 	// Input robot odometry and point cloud topics
 	nh_.param("assembled_cloud_topic", assembled_cloud_topic_, std::string("spinning_lidar/assembled_cloud"));
 	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
-	nh_.param("robot_odom_path__topic", robot_odom_path__topic_, std::string("robot_odom_path"));
+	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("robot_odom_path"));
 
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
 	{
-		nh_.param("prev_cloud__topic", prev_cloud_topic_, std::string("icpslam/prev_cloud_"));
+		nh_.param("prev_cloud_topic", prev_cloud_topic_, std::string("icpslam/prev_cloud_"));
 		nh_.param("aligned_cloud_topic", aligned_cloud_topic_, std::string("icpslam/aligned_cloud"));
 
 		nh_.param("icp_odom_topic", icp_odom_topic_, std::string("icpslam/odom"));
-		nh_.param("icp_odom_path__topic", icp_odom_path__topic_, std::string("icpslam/icp_odom_path"));
+		nh_.param("icp_odom_path_topic", icp_odom_path_topic_, std::string("icpslam/icp_odom_path"));
 	}
 }
 
 void ICPOdometer::advertisePublishers()
 {
-	robot_odom_path__pub_ = nh_.advertise<nav_msgs::Path>(robot_odom_path__topic_, 1);
+	robot_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(robot_odom_path_topic_, 1);
 	
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
 	{
-		prev_cloud__pub_ = nh_.advertise<sensor_msgs::PointCloud2>(prev_cloud_topic_, 1);
+		prev_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(prev_cloud_topic_, 1);
 		aligned_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(aligned_cloud_topic_, 1);
 
 		icp_odom_pub_ = nh_.advertise<nav_msgs::Odometry>(icp_odom_topic_, 1);
-		icp_odom_path__pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path__topic_, 1);
+		icp_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path_topic_, 1);
 	}
 }
 
@@ -99,20 +99,37 @@ bool ICPOdometer::isOdomReady()
 	return robot_odom_inited_;
 }
 
-Pose6DOF ICPOdometer::getLatestPoseRobotOdometry()
+Pose6DOF ICPOdometer::getLatestPoseRobotOdometry() 
+{ 
+  return robot_odom_poses_.back(); 
+} 
+
+Pose6DOF ICPOdometer::getLatestPoseICPOdometry() 
+{ 
+  return icp_odom_poses_.back(); 
+} 
+
+void ICPOdometer::getLatestPoseRobotOdometry(Pose6DOF *pose)
 {
-	return robot_odom_poses_.back();
+	*pose = robot_odom_poses_.back();
 }
 
-Pose6DOF ICPOdometer::getLatestPoseICPOdometry()
+void ICPOdometer::getLatestPoseICPOdometry(Pose6DOF *pose)
 {
-	return icp_odom_poses_.back();
+	*pose = icp_odom_poses_.back();
+}
+
+void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Pose6DOF *pose)
+{
+	*cloud = *prev_cloud_;
+	*pose = icp_odom_poses_.back();
 }
 
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
 {
 	// ROS_INFO("Robot odometry callback!");
 	Pose6DOF pose;
+	pose.time_stamp = robot_odom_msg->header.stamp;
 	pose.pos = getTranslationFromROSPose(robot_odom_msg->pose.pose);
 	pose.rot = getQuaternionFromROSPose(robot_odom_msg->pose.pose);
 	pose.cov = getCovarianceFromROSPoseWithCovariance(robot_odom_msg->pose);
@@ -145,7 +162,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	robot_odom_path_.header.stamp = ros::Time().now();
 	robot_odom_path_.header.frame_id = odom_frame_;
-	robot_odom_path__pub_.publish(robot_odom_path_);
+	robot_odom_path_pub_.publish(robot_odom_path_);
 }
 
 void ICPOdometer::mapTransformCallback(const ros::TimerEvent&)
@@ -168,8 +185,9 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
 	Eigen::Vector3d t = getTranslationFromTMatrix(T);
 	Eigen::Quaterniond q = getQuaternionFromTMatrix(T);
 
-	Pose6DOF prev_pose = getLatestPoseICPOdometry();
+	Pose6DOF prev_pose = getLatestPoseRobotOdometry();
 	Pose6DOF new_pose;
+	new_pose.time_stamp = ros::Time().now();
 	new_pose.pos = prev_pose.pos + prev_pose.rot.toRotationMatrix() * t;
 	new_pose.rot = prev_pose.rot * q;
 	new_pose.rot.normalize();
@@ -182,7 +200,7 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
 		publishOdometry(new_pose.pos, new_pose.rot, odom_frame_, robot_frame_, ros::Time().now(), &icp_odom_pub_);
 		icp_odom_path_.header.stamp = ros::Time().now();
 		icp_odom_path_.header.frame_id = odom_frame_;
-		icp_odom_path__pub_.publish(icp_odom_path_);
+		icp_odom_path_pub_.publish(icp_odom_path_);
 	}
 
 	if(verbosity_level_ >= 2)
@@ -234,9 +252,9 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 				// ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
 				// ROS_INFO("##   Registration");
 				// std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
-				std::cout << T << std::endl;
+				// std::cout << T << std::endl;
 				
-				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud__pub_);
+				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
 				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
 			}
 		}

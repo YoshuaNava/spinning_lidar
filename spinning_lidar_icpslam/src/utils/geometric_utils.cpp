@@ -1,7 +1,6 @@
 
-#ifndef GEOMETRIC_UTILS_H
-#define GEOMETRIC_UTILS_H
 
+#include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseWithCovariance.h>
 #include <nav_msgs/Odometry.h>
 #include <tf/transform_datatypes.h>
@@ -10,6 +9,16 @@
 
 #include "utils/geometric_utils.h"
 
+
+geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose)
+{
+	geometry_msgs::Point p;
+	p.x = pose.pos(0);
+	p.y = pose.pos(1);
+	p.z = pose.pos(2);
+
+	return p;
+}
 
 // Reference: https://github.com/ethz-asl/ethzasl_msf/blob/master/msf_eval/src/msf_eval.cpp
 Eigen::Matrix<double, 6, 6> getCovarianceFromROSPoseWithCovariance(geometry_msgs::PoseWithCovariance pose_msg)
@@ -127,6 +136,3 @@ double lengthOfVector(tf::Pose vector)
 {
 	return vector.getOrigin().length();
 }
-
-
-#endif

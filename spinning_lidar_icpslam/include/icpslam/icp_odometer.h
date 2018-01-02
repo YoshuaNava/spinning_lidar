@@ -26,6 +26,9 @@ class ICPOdometer
 {
 private:
 	// Constants
+	typedef ros::Time TimeStamp;
+	typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
 	const double POSE_DIST_THRESH = 0.1;
 	const double ICP_FITNESS_THRESH = 0.1;
 	const double ICP_MAX_CORR_DIST = 1.0;
@@ -39,13 +42,13 @@ private:
 	// ROS node handle, URDF frames, topics and publishers
 	ros::NodeHandle nh_;
 	std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
-	std::string robot_odom_topic_, robot_odom_path__topic_, assembled_cloud_topic_;
-	ros::Publisher robot_odom_path__pub_;
+	std::string robot_odom_topic_, robot_odom_path_topic_, assembled_cloud_topic_;
+	ros::Publisher robot_odom_path_pub_;
 	ros::Subscriber robot_odometry_sub_, assembled_cloud_sub_;
 
 	// ICP odometry debug topics and publishers
-	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path__topic_;
-	ros::Publisher prev_cloud__pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path__pub_;
+	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_;
+	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_;
 
 	// PCL clouds for odometry
 	pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_, curr_cloud_;
@@ -71,9 +74,15 @@ public:
 
 	bool isOdomReady();
 
-	Pose6DOF getLatestPoseRobotOdometry();
+ 	Pose6DOF getLatestPoseRobotOdometry(); 
+	
+	Pose6DOF getLatestPoseICPOdometry(); 
 
-	Pose6DOF getLatestPoseICPOdometry();
+	void getLatestPoseRobotOdometry(Pose6DOF *pose);
+
+	void getLatestPoseICPOdometry(Pose6DOF *pose);
+
+	void getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Pose6DOF *pose);
 
 	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
 
