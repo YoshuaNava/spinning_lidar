@@ -76,9 +76,9 @@ tf::Transform getTFTransformFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Q
 
 tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond q);
 
-Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4f &T);
+Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4d &T);
 
-Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4f &T);
+Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4d &T);
 
 geometry_msgs::Pose getROSPoseFromPosQuat(Eigen::Vector3d pos, Eigen::Quaterniond q);
 

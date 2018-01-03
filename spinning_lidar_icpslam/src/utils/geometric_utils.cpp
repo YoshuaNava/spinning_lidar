@@ -64,15 +64,15 @@ tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond
 	return pose;
 }
 
-Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4f &T)
+Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4d &T)
 {
 	Eigen::Vector3d translation(-T(0,3), -T(1,3), -T(2,3));
 	return translation;
 }
 
-Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4f &T)
+Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4d &T)
 {
-	Eigen::Matrix3d rot = T.block(0, 0, 3, 3).transpose().cast<double>();
+	Eigen::Matrix3d rot = T.block(0, 0, 3, 3).transpose();
 	Eigen::Quaterniond q(rot);
 	return q;
 }

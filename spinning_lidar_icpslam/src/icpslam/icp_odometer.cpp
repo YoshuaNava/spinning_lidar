@@ -32,6 +32,7 @@ ICPOdometer::ICPOdometer(ros::NodeHandle nh) :
 	prev_cloud_(new pcl::PointCloud<pcl::PointXYZ>()), curr_cloud_(new pcl::PointCloud<pcl::PointXYZ>())
 {
 	robot_odom_inited_ = false;
+	new_transform_ = false;
 	init();	
 }
 
@@ -121,10 +122,14 @@ void ICPOdometer::getLatestPoseICPOdometry(Pose6DOF *pose)
 	*pose = icp_odom_poses_.back();
 }
 
-void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Pose6DOF *pose)
+void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *pose, bool *new_transform)
 {
-	*cloud = *prev_cloud_;
+	*new_transform = new_transform_;
+	*cloud = prev_cloud_;
+	*latest_transform = icp_latest_transform_;
 	*pose = icp_odom_poses_.back();
+
+	new_transform_ = false;
 }
 
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
@@ -181,9 +186,11 @@ void ICPOdometer::mapTransformCallback(const ros::TimerEvent&)
 	}
 }
 
-void ICPOdometer::updateICPOdometry(Eigen::Matrix4f T)
+void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
 	// ROS_INFO("ICP odometry update!");
+	new_transform_ = true;
+	icp_latest_transform_.fromTMatrix(T);
 	Eigen::Vector3d t = getTranslationFromTMatrix(T);
 	Eigen::Quaterniond q = getQuaternionFromTMatrix(T);
 
@@ -242,7 +249,7 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 		icp.align(*aligned_cloud);
-		Eigen::Matrix4f T = icp.getFinalTransformation();
+		Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
 		
 		if(icp.hasConverged())
 		{
@@ -250,14 +257,17 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 
 			// Publishing for debug
 			if(verbosity_level_ >= 1)
-			{
-				// ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
-				// ROS_INFO("##   Registration");
-				// std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
-				// std::cout << T << std::endl;
-				
+			{				
 				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
 				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
+
+				if(verbosity_level_ >= 2)
+				{
+					ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
+					ROS_INFO("##   Registration");
+					std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
+					std::cout << T << std::endl;
+				}
 			}
 		}
 

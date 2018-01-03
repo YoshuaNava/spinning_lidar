@@ -9,10 +9,12 @@ const double KFS_DIST_THRESH = 0.5;
 const double VERTEX_DIST_THRESH = 0.2;
 
 
+
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "icpslam");
 	ros::NodeHandle nh;
+
 
 	ROS_INFO("#####       ICPSLAM         #####");	
 	ICPOdometer icp_odometer(nh);
@@ -36,22 +38,24 @@ int main(int argc, char** argv)
 		{
 			// ROS_INFO("Iteration %d", iter);
 			bool is_keyframe = false;
+			bool new_transform = false;
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+			Pose6DOF icp_latest_transform;
 
 			icp_odometer.getLatestPoseRobotOdometry(&robot_odom_pose);
-			icp_odometer.getLatestCloud(cloud, &icp_odom_pose);
+			icp_odometer.getLatestCloud(&cloud, &icp_latest_transform, &icp_odom_pose, &new_transform);
 
 			Eigen::Vector3d keyframe_pose_diff = icp_odom_pose.pos - prev_keyframe_pose.pos;
 			Eigen::Vector3d vertex_pose_diff = robot_odom_pose.pos - prev_vertex_pose.pos;
 			
-			if((keyframe_pose_diff.norm() > KFS_DIST_THRESH) || (num_keyframes == 0))
+			if(((keyframe_pose_diff.norm() > KFS_DIST_THRESH) || (num_keyframes == 0)) && (cloud->points.size()>0))
 			{
 				prev_keyframe_pose = icp_odom_pose;
 				prev_vertex_pose = robot_odom_pose;
 				num_keyframes++;
 				num_vertices++;
 				is_keyframe = true;
-				pose_optimizer.addNewVertex(*cloud, robot_odom_pose, is_keyframe, &curr_vertex_key);
+				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
 				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
 				ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
 				
@@ -62,7 +66,7 @@ int main(int argc, char** argv)
 			{
 				prev_vertex_pose = robot_odom_pose;
 				num_vertices++;
-				pose_optimizer.addNewVertex(*cloud, robot_odom_pose, is_keyframe, &curr_vertex_key);
+				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
 				ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
 			}
 	
@@ -79,8 +83,8 @@ int main(int argc, char** argv)
 
 				if(success)
 				{
+					pose_optimizer.refinePoseGraph();
 					octree_mapper.resetMap();
-					// pose_optimizer.refinePoseGraph();
 					pose_optimizer.publishRefinedMap();
 				}
 				run_pose_optimization = false;

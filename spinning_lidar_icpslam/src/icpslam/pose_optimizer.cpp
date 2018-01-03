@@ -88,18 +88,17 @@ void PoseOptimizer::loadParameters()
 	nh_.param("graph_edges_topic", graph_edges_topic_, std::string("icpslam/graph_edges"));
     nh_.param("graph_vertices_topic", graph_vertices_topic_, std::string("icpslam/graph_vertices"));
     nh_.param("graph_keyframes_topic", graph_keyframes_topic_, std::string("icpslam/graph_keyframes"));
+    nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("spinning_lidar/increment_cloud"));
 }
 
 void PoseOptimizer::advertisePublishers()
 {
-    tf::TransformBroadcaster tf_broadcaster;
-	tf_broadcaster_ptr_ = &tf_broadcaster;
     graph_edges_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_edges_topic_, 1);
     graph_vertices_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_vertices_topic_, 1);
     graph_keyframes_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_keyframes_topic_, 1);
     increment_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(increment_cloud_topic_, 1);
 
-    ros::Timer map_transform_timer_ = nh_.createTimer(ros::Duration(0.05), &PoseOptimizer::mapTransformCallback, this);
+    map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
 
     setGraphMarkersProperties();
 }
@@ -134,33 +133,26 @@ void PoseOptimizer::setGraphMarkersProperties()
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */
-void PoseOptimizer::addNewVertex(PointCloud new_cloud, Pose6DOF pose, bool is_keyframe, uint *key)
+void PoseOptimizer::addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, bool is_keyframe, uint *key)
 {
     *key = curr_vertex_key_;
 
     g2o::VertexSE3* v = new g2o::VertexSE3();
     v->setId(*key);
     g2o::SE3Quat se3_pose(pose.rot, pose.pos);
-    std::cout << "      se3_pose:\n" << se3_pose << std::endl;
+    v->setEstimate( se3_pose );
 
     if(is_keyframe)
     {
-        graph_scans_.insert(std::pair<uint, PointCloud>(*key, new_cloud));
+        graph_scans_.insert(std::pair<uint, PointCloud::Ptr>(*key, *new_cloud_ptr));
         // v->setMarginalized(true);
     }
 
     if(curr_vertex_key_ == 0)
     {
-        // v->setEstimate(g2o::SE3Quat());
-        v->setEstimate( se3_pose );
         v->setFixed(true);
-        // v->setMarginalized(true);
     }
-    else
-    {
-        v->setEstimate( se3_pose );
-    }
-
+    
     optimizer_->addVertex( v );
 
     graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
@@ -172,17 +164,15 @@ void PoseOptimizer::addNewVertex(PointCloud new_cloud, Pose6DOF pose, bool is_ke
 void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key)
 {
     *key = curr_edge_key_;
-    // graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
-
-    g2o::SE3Quat se3_pose(pose.rot, pose.pos);
-	Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
-    std::cout << "      se3_pose:\n" << se3_pose << std::endl;
-    // std::cout << "Covariance:\n" << pose.cov << std::endl;
 
 	g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex1_key ) );
 	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
-    // std::cout << "Vertex1:\n" << vertex1 << std::endl;
-    // std::cout << "Vertex2:\n" << vertex2 << std::endl;
+    Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
+    Pose6DOF e_pose(e_T);
+    // e_pose.pos = -1.0 * e_pose.pos;
+    g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
+
+    Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
 
 	g2o::EdgeSE3* edge = new g2o::EdgeSE3();
     edge->setId(*key);
@@ -246,6 +236,9 @@ void PoseOptimizer::refineVertices()
         Pose6DOF v_pose(v_T);
         v_pose.pos = -1.0 * v_pose.pos;
         graph_poses_.find(v_key)->second = v_pose;
+
+        if(v_key == optimizer_->vertices().size()-1)
+            latest_pose = v_pose;
     }
 }
 
@@ -253,28 +246,31 @@ void PoseOptimizer::refineEdges()
 {
     ROS_INFO("Refining edges");
     uint edge_key = 0;
-    for( g2o::HyperGraph::EdgeSet::iterator edge_ptr = optimizer_->edges().begin(); edge_ptr != optimizer_->edges().end(); edge_ptr++)
-    {
-        g2o::EdgeSE3* edge = dynamic_cast< g2o::EdgeSE3* >( *edge_ptr );
-        uint vertex1_key = edge->vertices()[0]->id();
-        uint vertex2_key = edge->vertices()[1]->id();
-        g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
-	    g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
-        Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
-        Pose6DOF new_pose;
-    
-        Pose6DOF e_pose(e_T);
-        e_pose.pos = -1.0 * e_pose.pos;
-        g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
-        // edge->setMeasurement(se3_pose);
+    // for( g2o::HyperGraph::EdgeSet::iterator edge_ptr = optimizer_->edges().begin(); edge_ptr != optimizer_->edges().end(); edge_ptr++)
+    // {
+    //     g2o::EdgeSE3* edge = dynamic_cast< g2o::EdgeSE3* >( *edge_ptr );
+    //     uint vertex1_key = edge->vertices()[0]->id();
+    //     uint vertex2_key = edge->vertices()[1]->id();
+    //     g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
+	//     g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
+    //     Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
+    //     Pose6DOF e_pose(e_T);
+    //     e_pose.pos = -1.0 * e_pose.pos;
+    //     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
+    //     // edge->setMeasurement(se3_pose);
 
-        edge_key++;
-    }
+    //     edge_key++;
+    // }
+}
+
+Pose6DOF PoseOptimizer::getStartPose()
+{
+    return graph_poses_.find(0)->second;
 }
 
 Pose6DOF PoseOptimizer::getLatestPose()
 {
-    return graph_poses_.find(curr_vertex_key_-1)->second;
+    return latest_pose;
 }
 
 bool PoseOptimizer::checkLoopClosure()
@@ -285,7 +281,7 @@ bool PoseOptimizer::checkLoopClosure()
 void PoseOptimizer::publishPoseGraphMarkers()
 {
     visualization_msgs::Marker edges_marker;
-    edges_marker.header.frame_id = "odom";
+    edges_marker.header.frame_id = odom_frame_;
     edges_marker.header.stamp = ros::Time().now();
     edges_marker.ns = namespace_;
     edges_marker.id = 0;
@@ -300,8 +296,6 @@ void PoseOptimizer::publishPoseGraphMarkers()
     edges_marker.pose.orientation.y = 0;
     edges_marker.pose.orientation.z = 0;
     edges_marker.pose.orientation.w = 1;
-
-
     for (size_t i = 0; i < curr_edge_key_; ++i)
     {
         uint vertex1_key = graph_edges_.at(i).first;
@@ -311,20 +305,14 @@ void PoseOptimizer::publishPoseGraphMarkers()
         point1 = getROSPointFromPose6DOF(graph_poses_.at(vertex1_key));
         point2 = getROSPointFromPose6DOF(graph_poses_.at(vertex2_key));
 
-        // ROS_INFO("Vis of Edge %d", i);
-        // Pose6DOF pose1 = graph_poses_.at(vertex1_key);
-        // Pose6DOF pose2 = graph_poses_.at(vertex2_key);
-        // std::cout << "  vertex1: " << pose1.pos << "\n";
-        // std::cout << "  vertex2: " << pose2.pos << "\n";
-
         edges_marker.points.push_back(point1);
         edges_marker.points.push_back(point2);
     }
     graph_edges_pub_.publish(edges_marker);
-
+    
 
     visualization_msgs::Marker vertices_marker;
-    vertices_marker.header.frame_id = "odom";
+    vertices_marker.header.frame_id = odom_frame_;
     vertices_marker.header.stamp = ros::Time().now();
     vertices_marker.ns = namespace_;
     vertices_marker.id = 1;
@@ -341,7 +329,7 @@ void PoseOptimizer::publishPoseGraphMarkers()
     vertices_marker.pose.orientation.w = 1;
 
     visualization_msgs::Marker keyframes_marker;
-    keyframes_marker.header.frame_id = "odom";
+    keyframes_marker.header.frame_id = odom_frame_;
     keyframes_marker.header.stamp = ros::Time().now();
     keyframes_marker.ns = namespace_;
     keyframes_marker.id = 2;
@@ -360,10 +348,6 @@ void PoseOptimizer::publishPoseGraphMarkers()
     for (size_t i = 0; i < curr_vertex_key_; ++i)
     {
         geometry_msgs::Point point = getROSPointFromPose6DOF(graph_poses_.at(i));
-
-        // ROS_INFO("Vis of Vertex  %d", i);
-        // Pose6DOF pose = graph_poses_.at(i);
-        // std::cout << "  vertex: " << pose.pos;
 
         if(graph_scans_.count(i) == 1)
             keyframes_marker.points.push_back(point);
@@ -384,11 +368,20 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
     tf::Transform transform;
     if(graph_poses_.size() > 0)
     {
-        Pose6DOF pose = getLatestPose();
+        tf::Pose robot_in_map(tf::Quaternion(latest_pose.rot.x(), latest_pose.rot.y(), latest_pose.rot.z(), latest_pose.rot.w()), 
+            tf::Vector3(latest_pose.pos(0), latest_pose.pos(1), latest_pose.pos(2)));
+        tf::Pose map_in_robot = robot_in_map.inverse();
 
-        // Publish transform between odom and map
-        transform.setOrigin( tf::Vector3(pose.pos(0), pose.pos(1), pose.pos(2)) );
-        transform.setRotation( tf::Quaternion(pose.rot.x(), pose.rot.y(), pose.rot.z(), pose.rot.w()) );
+        tf::Stamped<tf::Pose> map_in_odom;
+        try
+        {
+            tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(map_in_robot, ros::Time(0), robot_frame_), map_in_odom);
+        }
+        catch(tf::TransformException e)
+        { }
+
+        transform.setOrigin( map_in_odom.getOrigin() );
+        transform.setRotation( map_in_odom.getRotation() );
     }
     else
     {
@@ -396,7 +389,7 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
         transform.setRotation( tf::Quaternion(0, 0, 0, 1) );
     }
 
-    tf_broadcaster_ptr_->sendTransform(tf::StampedTransform(transform.inverse(), ros::Time::now(), odom_frame_, map_frame_));
+    tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, map_frame_));
 }
 
 void PoseOptimizer::publishRefinedMap()
@@ -406,15 +399,20 @@ void PoseOptimizer::publishRefinedMap()
         if(graph_scans_.count(i) == 1)
         {
             Pose6DOF pose = graph_poses_.at(i);
-            PointCloud::Ptr cloud(&graph_scans_.at(i));
-            PointCloud::Ptr cloud_out(new PointCloud());
+            // PointCloud cloud = graph_scans_.at(i);
+            PointCloud::Ptr cloud_ptr = graph_scans_.at(i);
+            PointCloud::Ptr cloud_out_ptr(new PointCloud());
 
             tf::StampedTransform transform;
             transform.setOrigin(tf::Vector3(pose.pos(0), pose.pos(1), pose.pos(2)));
             transform.setRotation(tf::Quaternion(pose.rot.x(), pose.rot.y(), pose.rot.z(), pose.rot.w()));
-            pcl_ros::transformPointCloud(*cloud, *cloud_out, transform);
-
-            publishPointCloud(cloud_out, map_frame_, ros::Time().now(), &increment_cloud_pub_);
+            try
+            {
+                pcl_ros::transformPointCloud(*cloud_ptr, *cloud_out_ptr, transform);
+                publishPointCloud(cloud_out_ptr, map_frame_, ros::Time().now(), &increment_cloud_pub_);
+            }
+            catch(tf::TransformException e)
+            { }
         }
     }   
 }

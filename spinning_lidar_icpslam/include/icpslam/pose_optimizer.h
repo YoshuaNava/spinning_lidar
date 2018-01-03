@@ -28,19 +28,20 @@ private:
 
     uint curr_vertex_key_, curr_edge_key_;
     std::map<uint, TimeStamp> graph_stamps_;
-    std::map<uint, PointCloud> graph_scans_;
+    std::map<uint, PointCloud::Ptr> graph_scans_;
     std::map<uint, Pose6DOF> graph_poses_;
     std::map<uint, std::pair<uint, uint>> graph_edges_;
     g2o::SparseOptimizer* optimizer_;
+    Pose6DOF latest_pose;
     int pose_opt_iters;
 
     ros::NodeHandle nh_;
-    tf::TransformBroadcaster* tf_broadcaster_ptr_;
-    std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
-    ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_;
-    std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_, increment_cloud_topic_;
-    ros::Publisher increment_cloud_pub_;
+    tf::TransformListener tf_listener_;
+    tf::TransformBroadcaster tf_broadcaster_;
     ros::Timer map_transform_timer_;
+    std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_, increment_cloud_topic_;
+    std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
+    ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_, increment_cloud_pub_;
 
     std_msgs::ColorRGBA vertex_color_;
     std_msgs::ColorRGBA odom_edge_color_;
@@ -64,7 +65,7 @@ public:
 
     void advertisePublishers();
 
-    void addNewVertex(PointCloud new_cloud, Pose6DOF pose, bool is_keyframe, uint *key);
+    void addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, bool is_keyframe, uint *key);
 
     void addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key);
 
@@ -75,6 +76,8 @@ public:
     void refineVertices();
 
     void refineEdges();
+
+    Pose6DOF getStartPose();
 
     Pose6DOF getLatestPose();
 

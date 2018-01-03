@@ -48,8 +48,8 @@ private:
     ros::Subscriber increment_cloud_sub_;
 
     // tf handlers
-    tf::TransformListener* tf_listener_ptr_;
-    tf::TransformBroadcaster* tf_broadcaster_ptr_;
+    tf::TransformListener tf_listener_;
+    tf::TransformBroadcaster tf_broadcaster_;
 
     // PCL clouds for mapping
     pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_;
