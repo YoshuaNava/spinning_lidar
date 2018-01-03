@@ -172,20 +172,6 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	robot_odom_path_pub_.publish(robot_odom_path_);
 }
 
-void ICPOdometer::mapTransformCallback(const ros::TimerEvent&)
-{
-	if(robot_odom_inited_)
-	{
-		Pose6DOF pose = getLatestPoseICPOdometry();
-
-		// Publish transform between odom and map
-		tf::Transform transform;
-		transform.setOrigin( tf::Vector3(pose.pos(0), pose.pos(1), pose.pos(2)) );
-		transform.setRotation( tf::Quaternion(pose.rot.x(), pose.rot.y(), pose.rot.z(), pose.rot.w()) );				
-		tf_broadcaster_ptr_->sendTransform(tf::StampedTransform(transform, ros::Time::now(), map_frame_, odom_frame_));
-	}
-}
-
 void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
 	// ROS_INFO("ICP odometry update!");

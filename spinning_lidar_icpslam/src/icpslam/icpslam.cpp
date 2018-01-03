@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 				is_keyframe = true;
 				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
 				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
-				ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
+				// ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
 				
 				if(num_keyframes % keyframes_window == 0)
 					run_pose_optimization = true;
@@ -67,14 +67,14 @@ int main(int argc, char** argv)
 				prev_vertex_pose = robot_odom_pose;
 				num_vertices++;
 				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
-				ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
+				// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
 			}
 	
 			if ((num_vertices > 1) && (prev_vertex_key < curr_vertex_key))
 			{
 				pose_optimizer.addNewEdge(robot_odom_pose, prev_vertex_key, curr_vertex_key, &edge_key);
-				ROS_INFO("	Edge inserted! ID %d", edge_key);
-				ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
+				// ROS_INFO("	Edge inserted! ID %d", edge_key);
+				// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 			}
 
 			if(run_pose_optimization)

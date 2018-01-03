@@ -82,9 +82,6 @@ target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
 add_executable(icpslam src/icpslam/icpslam.cpp)
 target_link_libraries(icpslam ${catkin_LIBRARIES} ${PROJECT_NAME})
 
-add_executable(mapping src/icpslam/mapping.cpp)
-target_link_libraries(mapping ${catkin_LIBRARIES} ${PROJECT_NAME})
-
 
 if(BUILD_TESTS)
     add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp)

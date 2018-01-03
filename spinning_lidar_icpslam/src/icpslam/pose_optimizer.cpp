@@ -375,7 +375,7 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
         tf::Stamped<tf::Pose> map_in_odom;
         try
         {
-            tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(map_in_robot, ros::Time(0), robot_frame_), map_in_odom);
+            tf_listener_.transformPose(robot_frame_, tf::Stamped<tf::Pose>(map_in_robot, ros::Time(0), odom_frame_), map_in_odom);
         }
         catch(tf::TransformException e)
         { }

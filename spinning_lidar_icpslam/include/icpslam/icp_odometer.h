@@ -90,8 +90,6 @@ public:
 
 	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
 
-	void mapTransformCallback(const ros::TimerEvent&);
-
 	void updateICPOdometry(Eigen::Matrix4d T);
 
 	void assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
