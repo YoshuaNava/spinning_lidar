@@ -62,6 +62,7 @@ LIST(APPEND SOURCEFILES
     src/utils/messaging_utils.cpp
     src/icpslam/icp_odometer.cpp
     src/icpslam/pose_optimizer.cpp
+    src/icpslam/octree_mapper.cpp
 )
 add_library(${PROJECT_NAME} ${SOURCEFILES})
 target_link_libraries(${PROJECT_NAME}

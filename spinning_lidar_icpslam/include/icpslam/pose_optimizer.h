@@ -38,7 +38,9 @@ private:
     tf::TransformBroadcaster* tf_broadcaster_ptr_;
     std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
     ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_;
-    std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_;
+    std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_, increment_cloud_topic_;
+    ros::Publisher increment_cloud_pub_;
+    ros::Timer map_transform_timer_;
 
     std_msgs::ColorRGBA vertex_color_;
     std_msgs::ColorRGBA odom_edge_color_;
@@ -68,15 +70,21 @@ public:
 
     bool optimizeGraph();
 
+    void refinePoseGraph();
+
     void refineVertices();
 
-    Pose6DOF getLatestPose();
+    void refineEdges();
 
-    void publishMapTransform();
+    Pose6DOF getLatestPose();
 
     bool checkLoopClosure();
 
     void publishPoseGraphMarkers();
+
+    void mapTransformCallback(const ros::TimerEvent&);
+
+    void publishRefinedMap();
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

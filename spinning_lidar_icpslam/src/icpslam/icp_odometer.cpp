@@ -39,16 +39,7 @@ void ICPOdometer::init()
 {
 	loadParameters();
 	advertisePublishers();
-
-	tf::TransformListener tf_listener;
-	tf_listener_ptr_ = &tf_listener;
-	tf::TransformBroadcaster tf_broadcaster;
-	tf_broadcaster_ptr_ = &tf_broadcaster;
-
-	// ros::Timer timer_map_tf = nh_.createTimer(ros::Duration(0.1), mapTransformCallback);
-
-	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 1, &ICPOdometer::robotOdometryCallback, this);
-	assembled_cloud_sub_ = nh_.subscribe(assembled_cloud_topic_, 1, &ICPOdometer::assembledCloudCallback, this);
+	registerSubscribers();
 
 	ROS_INFO("ICP odometer initialized");
 }
@@ -92,6 +83,17 @@ void ICPOdometer::advertisePublishers()
 		icp_odom_pub_ = nh_.advertise<nav_msgs::Odometry>(icp_odom_topic_, 1);
 		icp_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path_topic_, 1);
 	}
+}
+
+void ICPOdometer::registerSubscribers()
+{
+	tf::TransformListener tf_listener;
+	tf_listener_ptr_ = &tf_listener;
+	tf::TransformBroadcaster tf_broadcaster;
+	tf_broadcaster_ptr_ = &tf_broadcaster;
+
+	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 1, &ICPOdometer::robotOdometryCallback, this);
+	assembled_cloud_sub_ = nh_.subscribe(assembled_cloud_topic_, 1, &ICPOdometer::assembledCloudCallback, this);
 }
 
 bool ICPOdometer::isOdomReady()

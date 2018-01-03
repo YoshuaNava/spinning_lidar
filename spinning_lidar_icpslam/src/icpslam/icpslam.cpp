@@ -2,6 +2,7 @@
 
 #include "icpslam/icp_odometer.h"
 #include "icpslam/pose_optimizer.h"
+#include "icpslam/octree_mapper.h"
 
 
 const double KFS_DIST_THRESH = 0.5;
@@ -16,9 +17,11 @@ int main(int argc, char** argv)
 	ROS_INFO("#####       ICPSLAM         #####");	
 	ICPOdometer icp_odometer(nh);
 	PoseOptimizer pose_optimizer(nh);
+	OctreeMapper octree_mapper(nh);
 
 	bool run_pose_optimization = false;
-	int keyframes_window = 3;
+	int keyframes_window = 5;
+
 	uint curr_vertex_key, prev_vertex_key, edge_key;
 	prev_vertex_key = 0;
 	curr_vertex_key = 0;
@@ -72,20 +75,20 @@ int main(int argc, char** argv)
 
 			if(run_pose_optimization)
 			{
-				ROS_INFO("***** Graph pose optimization");
 				bool success = pose_optimizer.optimizeGraph();
 
 				if(success)
 				{
-					pose_optimizer.refineVertices();
+					octree_mapper.resetMap();
+					// pose_optimizer.refinePoseGraph();
+					pose_optimizer.publishRefinedMap();
 				}
 				run_pose_optimization = false;
+				ROS_INFO("***** Graph pose optimization");
 			}
 
 			prev_vertex_key = curr_vertex_key;
 			pose_optimizer.publishPoseGraphMarkers();
-
-			// std::cout << std::endl;
 
 			iter++;
 		}

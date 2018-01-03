@@ -46,6 +46,11 @@ public:
 		return *this;
 	}
 
+	bool operator ==(const Pose6DOF &pose)
+	{
+		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
+	}
+
 	void fromTMatrix(Eigen::Matrix4d &T)
 	{
 		this->pos = Eigen::Vector3d(-T(0,3), -T(1,3), -T(2,3));
@@ -53,13 +58,11 @@ public:
 		this->rot = Eigen::Quaterniond(rot);
 	}
 
-	bool operator ==(const Pose6DOF &pose)
-	{
-		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
-	}
+
 private:
 	const double EQUALITY_THRESH = 1e-10;
 };
+
 
 geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose);
 

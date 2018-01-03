@@ -10,6 +10,13 @@
 #include "utils/geometric_utils.h"
 
 
+// std::ostream& operator <<(std::ostream &os, const Pose6DOF& pose)
+// { 
+// 	os << "Pos = (" << pose.pos(0) << ", " << pose.pos(1) << ", " << pose.pos(2) << ")\n";
+// 	os << "Rot = (" << pose.rot.x() << ", " << pose.rot.y() << ", " << pose.rot.z() << ", " << pose.rot.w() << ")\n";
+// 	return os;
+// }
+
 geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose)
 {
 	geometry_msgs::Point p;

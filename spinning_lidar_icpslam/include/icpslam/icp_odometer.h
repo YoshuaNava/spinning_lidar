@@ -72,6 +72,8 @@ public:
 
 	void advertisePublishers();
 
+	void registerSubscribers();
+
 	bool isOdomReady();
 
  	Pose6DOF getLatestPoseRobotOdometry(); 
