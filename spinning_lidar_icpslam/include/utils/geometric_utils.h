@@ -108,27 +108,30 @@ public:
 		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
 	}
 
-	void setIdentity()
+	Pose6DOF setIdentity()
 	{
 		time_stamp = ros::Time(0);
 		pos = Eigen::Vector3d(0,0,0);
 		rot = Eigen::Quaterniond(0,0,0,1);
 		cov = Eigen::MatrixXd::Zero(6,6);
 		cov.setIdentity();
+		return *this;
 	}
 
-	void compose(Pose6DOF &p2)
+	Pose6DOF compose(Pose6DOF &p2)
 	{
 		Pose6DOF p3 = compose(*this, p2);
 		pos = p3.pos;
 		rot = p3.rot;
+		return *this;
 	}
 
-	void subtract(Pose6DOF &p2)
+	Pose6DOF subtract(Pose6DOF &p2)
 	{
-		Pose6DOF p3 = compose(*this, p2);
+		Pose6DOF p3 = subtract(*this, p2);
 		pos = p3.pos;
 		rot = p3.rot;
+		return *this;
 	}
 
 	double distanceEuclidean(Pose6DOF p2)

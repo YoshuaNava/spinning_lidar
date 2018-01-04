@@ -61,8 +61,8 @@ private:
 	Pose6DOF icp_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
 	std::vector<Pose6DOF> robot_odom_poses_;
-	tf::TransformListener* tf_listener_ptr_;
-	tf::TransformBroadcaster* tf_broadcaster_ptr_;
+	tf::TransformListener tf_listener_;
+	tf::TransformBroadcaster tf_broadcaster_;
 
 public:
 
@@ -75,6 +75,8 @@ public:
 	void advertisePublishers();
 
 	void registerSubscribers();
+
+	void publishInitialMapTransform();
 
 	bool isOdomReady();
 

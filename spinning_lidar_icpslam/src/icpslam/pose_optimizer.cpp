@@ -285,7 +285,7 @@ bool PoseOptimizer::checkLoopClosure()
 void PoseOptimizer::publishPoseGraphMarkers()
 {
     visualization_msgs::Marker edges_marker;
-    edges_marker.header.frame_id = odom_frame_;
+    edges_marker.header.frame_id = map_frame_;
     edges_marker.header.stamp = ros::Time().now();
     edges_marker.ns = namespace_;
     edges_marker.id = 0;
@@ -316,7 +316,7 @@ void PoseOptimizer::publishPoseGraphMarkers()
     
 
     visualization_msgs::Marker vertices_marker;
-    vertices_marker.header.frame_id = odom_frame_;
+    vertices_marker.header.frame_id = map_frame_;
     vertices_marker.header.stamp = ros::Time().now();
     vertices_marker.ns = namespace_;
     vertices_marker.id = 1;
@@ -333,7 +333,7 @@ void PoseOptimizer::publishPoseGraphMarkers()
     vertices_marker.pose.orientation.w = 1;
 
     visualization_msgs::Marker keyframes_marker;
-    keyframes_marker.header.frame_id = odom_frame_;
+    keyframes_marker.header.frame_id = map_frame_;
     keyframes_marker.header.stamp = ros::Time().now();
     keyframes_marker.ns = namespace_;
     keyframes_marker.id = 2;

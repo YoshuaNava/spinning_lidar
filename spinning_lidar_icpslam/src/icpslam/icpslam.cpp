@@ -6,7 +6,7 @@
 
 
 const double KFS_DIST_THRESH = 0.5;
-const double VERTEX_DIST_THRESH = 0.2;
+const double VERTEX_DIST_THRESH = 0.05;
 
 
 
@@ -62,11 +62,11 @@ int main(int argc, char** argv)
 				if(num_keyframes % keyframes_window == 0)
 					run_pose_optimization = true;
 			}
-			else if (vertex_pose_diff.norm() > VERTEX_DIST_THRESH)
+			else //if (vertex_pose_diff.norm() > VERTEX_DIST_THRESH)
 			{
 				prev_vertex_pose = robot_odom_pose;
 				num_vertices++;
-				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
+				pose_optimizer.addNewVertex(&cloud, robot_odom_pose, is_keyframe, &curr_vertex_key);
 				// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
 			}
 	
