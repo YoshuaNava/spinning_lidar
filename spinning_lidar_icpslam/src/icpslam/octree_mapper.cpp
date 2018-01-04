@@ -25,7 +25,7 @@ void OctreeMapper::loadParameters()
 	nh_.param("verbosity_level", verbosity_level_, 2);
 
 	// TF frames
-	nh_.param("map_frame", map_frame_, std::string("odom"));
+	nh_.param("map_frame", map_frame_, std::string("map"));
 	nh_.param("odom_frame", odom_frame_, std::string("odom"));
 	nh_.param("robot_frame", robot_frame_, std::string("base_link"));
 	nh_.param("laser_frame", laser_frame_, std::string("laser"));

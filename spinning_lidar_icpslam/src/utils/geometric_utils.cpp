@@ -43,6 +43,15 @@ tf::Transform getTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
 	return transform;
 }
 
+tf::Pose getTFPoseFromROSPose(geometry_msgs::Pose pose)
+{
+	tf::Pose transform;
+	transform.setOrigin(tf::Vector3(pose.position.x, pose.position.y, pose.position.z));
+	transform.setRotation(tf::Quaternion(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w));
+
+	return transform;
+}
+
 tf::Transform getInverseTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
 {
 	return getTFTransformFromROSOdometry(odom_msg).inverse();

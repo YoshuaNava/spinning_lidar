@@ -16,6 +16,7 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     cmake_modules
+    gazebo_msgs
     laser_assembler
     laser_geometry
     message_filters
@@ -29,7 +30,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
     DEPENDS EIGEN3 PCL
     INCLUDE_DIRS include
-    CATKIN_DEPENDS cmake_modules laser_assembler laser_geometry message_filters pcl_ros roscpp sensor_msgs std_msgs tf
+    CATKIN_DEPENDS cmake_modules gazebo_msgs laser_assembler laser_geometry message_filters pcl_ros roscpp sensor_msgs std_msgs tf
 )
 
 include_directories(

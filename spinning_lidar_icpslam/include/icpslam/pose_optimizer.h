@@ -18,6 +18,8 @@
 #include "g2o/types/icp/types_icp.h"
 #include "g2o/types/slam3d/types_slam3d.h"
 
+#include <gazebo_msgs/GetModelState.h>
+
 class PoseOptimizer
 {
 private:
@@ -42,6 +44,7 @@ private:
     std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_, increment_cloud_topic_;
     std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
     ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_, increment_cloud_pub_;
+    ros::ServiceClient gazebo_map_service_;
 
     std_msgs::ColorRGBA vertex_color_;
     std_msgs::ColorRGBA odom_edge_color_;
@@ -86,6 +89,8 @@ public:
     void publishPoseGraphMarkers();
 
     void mapTransformCallback(const ros::TimerEvent&);
+
+    void gazeboMapTransformCallback(const ros::TimerEvent&);
 
     void publishRefinedMap();
 

@@ -51,6 +51,38 @@ public:
 		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
 	}
 
+	void compose(Pose6DOF &p2)
+	{
+		this->pos = this->pos + this->rot.toRotationMatrix() * p2.pos;
+		this->rot = this->rot * p2.rot;
+		this->rot.normalize();
+	}
+
+	void substract(Pose6DOF &p2)
+	{
+		this->pos = this->pos - this->rot.toRotationMatrix() * p2.pos;
+		this->rot = this->rot * p2.rot.inverse();
+		this->rot.normalize();
+	}
+
+	static Pose6DOF compose(Pose6DOF &p1, Pose6DOF &p2)
+	{
+		Pose6DOF p3;
+		p3.pos = p1.pos + p1.rot.toRotationMatrix() * p2.pos;
+		p3.rot = p1.rot * p2.rot;
+		p3.rot.normalize();
+		return p3;
+	}
+
+	static Pose6DOF substract(Pose6DOF &p1, Pose6DOF &p2)
+	{
+		Pose6DOF p3;
+		p3.pos = p1.pos - p1.rot.toRotationMatrix() * p2.pos;
+		p3.rot = p1.rot * p2.rot.inverse();
+		p3.rot.normalize();
+		return p3;
+	}
+
 	void fromTMatrix(Eigen::Matrix4d &T)
 	{
 		this->pos = Eigen::Vector3d(-T(0,3), -T(1,3), -T(2,3));
@@ -58,6 +90,39 @@ public:
 		this->rot = Eigen::Quaterniond(rot);
 	}
 
+	void fromROSPose(geometry_msgs::Pose &pose)
+	{
+		this->pos = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
+		this->rot = Eigen::Quaterniond(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
+	}
+
+	void fromTFPose(tf::Pose &pose)
+	{
+		this->pos = Eigen::Vector3d(pose.getOrigin().getX(), pose.getOrigin().getY(), pose.getOrigin().getZ());
+		this->rot = Eigen::Quaterniond(pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z(), pose.getRotation().w());
+	}
+	
+	void fromTFTransform(tf::Transform &transform)
+	{
+		this->pos = Eigen::Vector3d(transform.getOrigin().getX(), transform.getOrigin().getY(), transform.getOrigin().getZ());
+		this->rot = Eigen::Quaterniond(transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w());
+	}
+
+	tf::Transform toTFTransform()
+	{
+		tf::Pose transform;
+		transform.setOrigin(tf::Vector3(this->pos(0), this->pos(1), this->pos(2)));
+		transform.setRotation(tf::Quaternion(this->rot.x(), this->rot.y(), this->rot.z(), this->rot.w()));
+		return transform;
+	}
+
+	tf::Pose toTFPose()
+	{
+		tf::Pose pose;
+		pose.setOrigin(tf::Vector3(this->pos(0), this->pos(1), this->pos(2)));
+		pose.setRotation(tf::Quaternion(this->rot.x(), this->rot.y(), this->rot.z(), this->rot.w()));
+		return pose;
+	}
 
 private:
 	const double EQUALITY_THRESH = 1e-10;
@@ -69,6 +134,8 @@ geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose);
 Eigen::Matrix<double, 6, 6> getCovarianceFromROSPoseWithCovariance(geometry_msgs::PoseWithCovariance pose_msg);
 
 tf::Transform getTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg);
+
+tf::Pose getTFPoseFromROSPose(geometry_msgs::Pose pose);
 
 tf::Transform getInverseTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg);
 

@@ -43,6 +43,8 @@
 #include "g2o/types/slam3d/types_slam3d.h"
 
 
+#include <gazebo_msgs/GetModelState.h>
+
 
 PoseOptimizer::PoseOptimizer(ros::NodeHandle nh) :
     nh_(nh)
@@ -98,7 +100,9 @@ void PoseOptimizer::advertisePublishers()
     graph_keyframes_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_keyframes_topic_, 1);
     increment_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(increment_cloud_topic_, 1);
 
-    map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
+    gazebo_map_service_ = nh_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
+    map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::gazeboMapTransformCallback, this);
+    // map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
 
     setGraphMarkersProperties();
 }
@@ -198,7 +202,7 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
 
 bool PoseOptimizer::optimizeGraph()
 {
-    optimizer_->save("icpslam_posegraph_before.g2o");
+    // optimizer_->save("icpslam_posegraph_before.g2o");
     optimizer_->initializeOptimization();
     optimizer_->computeActiveErrors();
     optimizer_->setVerbose(true);
@@ -215,7 +219,7 @@ bool PoseOptimizer::optimizeGraph()
     ROS_INFO("Pose graph optimization finished after %i iterations.", iters);
     // std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
     
-    optimizer_->save("icpslam_posegraph_after.g2o");
+    // optimizer_->save("icpslam_posegraph_after.g2o");
 
     return true;
 }
@@ -223,7 +227,7 @@ bool PoseOptimizer::optimizeGraph()
 void PoseOptimizer::refinePoseGraph()
 {
     refineVertices();
-    refineEdges();
+    // refineEdges();
 }
 
 void PoseOptimizer::refineVertices()
@@ -246,21 +250,21 @@ void PoseOptimizer::refineEdges()
 {
     ROS_INFO("Refining edges");
     uint edge_key = 0;
-    // for( g2o::HyperGraph::EdgeSet::iterator edge_ptr = optimizer_->edges().begin(); edge_ptr != optimizer_->edges().end(); edge_ptr++)
-    // {
-    //     g2o::EdgeSE3* edge = dynamic_cast< g2o::EdgeSE3* >( *edge_ptr );
-    //     uint vertex1_key = edge->vertices()[0]->id();
-    //     uint vertex2_key = edge->vertices()[1]->id();
-    //     g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
-	//     g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
-    //     Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
-    //     Pose6DOF e_pose(e_T);
-    //     e_pose.pos = -1.0 * e_pose.pos;
-    //     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
-    //     // edge->setMeasurement(se3_pose);
+    for( g2o::HyperGraph::EdgeSet::iterator edge_ptr = optimizer_->edges().begin(); edge_ptr != optimizer_->edges().end(); edge_ptr++)
+    {
+        g2o::EdgeSE3* edge = dynamic_cast< g2o::EdgeSE3* >( *edge_ptr );
+        uint vertex1_key = edge->vertices()[0]->id();
+        uint vertex2_key = edge->vertices()[1]->id();
+        g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
+	    g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
+        Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
+        Pose6DOF e_pose(e_T);
+        e_pose.pos = -1.0 * e_pose.pos;
+        g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
+        // edge->setMeasurement(se3_pose);
 
-    //     edge_key++;
-    // }
+        edge_key++;
+    }
 }
 
 Pose6DOF PoseOptimizer::getStartPose()
@@ -363,6 +367,32 @@ void PoseOptimizer::publishPoseGraphMarkers()
     
 }
 
+void PoseOptimizer::gazeboMapTransformCallback(const ros::TimerEvent&)
+{
+    gazebo_msgs::GetModelState srv;
+    srv.request.model_name = "ridgeback_yumi";
+
+    if(gazebo_map_service_.call(srv))
+    {
+        // Correct estimation of map->odom from map->robot
+        tf::Pose robot_in_map = getTFPoseFromROSPose(srv.response.pose);
+        tf::Pose map_in_robot = robot_in_map.inverse();
+        tf::Stamped<tf::Pose> map_in_odom;
+        try
+        {
+            tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(map_in_robot, ros::Time(0), robot_frame_), map_in_odom);
+        }
+        catch(tf::TransformException e)
+        { }
+
+        tf::Transform transform;
+        transform.setOrigin( map_in_odom.getOrigin() );
+        transform.setRotation( map_in_odom.getRotation() );
+
+        tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, map_frame_));
+    }
+}
+
 void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
 {
     tf::Transform transform;
@@ -370,7 +400,7 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
     {
         tf::Pose robot_in_map(tf::Quaternion(latest_pose.rot.x(), latest_pose.rot.y(), latest_pose.rot.z(), latest_pose.rot.w()), 
             tf::Vector3(latest_pose.pos(0), latest_pose.pos(1), latest_pose.pos(2)));
-        tf::Pose map_in_robot = robot_in_map.inverse();
+        tf::Pose map_in_robot = robot_in_map;//.inverse();
 
         tf::Stamped<tf::Pose> map_in_odom;
         try
@@ -403,9 +433,7 @@ void PoseOptimizer::publishRefinedMap()
             PointCloud::Ptr cloud_ptr = graph_scans_.at(i);
             PointCloud::Ptr cloud_out_ptr(new PointCloud());
 
-            tf::StampedTransform transform;
-            transform.setOrigin(tf::Vector3(pose.pos(0), pose.pos(1), pose.pos(2)));
-            transform.setRotation(tf::Quaternion(pose.rot.x(), pose.rot.y(), pose.rot.z(), pose.rot.w()));
+            tf::Transform transform = pose.toTFTransform();
             try
             {
                 pcl_ros::transformPointCloud(*cloud_ptr, *cloud_out_ptr, transform);
