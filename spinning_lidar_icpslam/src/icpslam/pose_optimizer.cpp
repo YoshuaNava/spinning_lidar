@@ -56,7 +56,6 @@ void PoseOptimizer::init()
 {
     curr_vertex_key_ = 0;
     curr_edge_key_ = 0;
-    graph_stamps_.clear();
     graph_scans_.clear();
     graph_poses_.clear();
 
@@ -72,7 +71,7 @@ void PoseOptimizer::init()
     optimizer_->setVerbose(true);
 
     namespace_ = "icpslam";
-    pose_opt_iters = 10;
+    pose_opt_iters = 30;
 
     loadParameters();
     advertisePublishers();
@@ -159,8 +158,10 @@ void PoseOptimizer::addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_tr
     
     optimizer_->addVertex( v );
 
-    graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
     graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
+
+    if(graph_poses_.size() == 0)
+        latest_pose = pose;
 
     curr_vertex_key_++;
 }
@@ -176,7 +177,6 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
 
     Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
-
 	g2o::EdgeSE3* edge = new g2o::EdgeSE3();
     edge->setId(*key);
     edge->vertices()[0] = vertex1;
@@ -192,7 +192,6 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
         return;
     }
 
-    graph_stamps_.insert(std::pair<uint, ros::Time>(*key, pose.time_stamp));
     std::pair<uint, uint> edge_keys(vertex1_key, vertex2_key);
     graph_edges_.insert(std::pair<uint, std::pair<uint, uint>>(*key, edge_keys));
 
@@ -209,13 +208,13 @@ bool PoseOptimizer::optimizeGraph()
     ROS_ERROR("Optimization iterating");
     int iters = optimizer_->optimize(pose_opt_iters);
     
-    if (iters == 0)
+    if (iters < pose_opt_iters)
     {
-        ROS_ERROR("Pose graph optimization failed!");
+        ROS_ERROR("Pose graph optimization failed after %i iterations.", iters);
         return false;
     }
 
-    ROS_INFO("Pose graph optimization finished after %i iterations.", iters);
+    ROS_ERROR("Pose graph optimization finished!");
     // std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
     
     optimizer_->save("icpslam_posegraph_after.g2o");
@@ -226,7 +225,7 @@ bool PoseOptimizer::optimizeGraph()
 void PoseOptimizer::refinePoseGraph()
 {
     refineVertices();
-    // refineEdges();
+    refineEdges();
 }
 
 void PoseOptimizer::refineVertices()
@@ -399,7 +398,7 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
     {
         tf::Pose robot_in_map(tf::Quaternion(latest_pose.rot.x(), latest_pose.rot.y(), latest_pose.rot.z(), latest_pose.rot.w()), 
             tf::Vector3(latest_pose.pos(0), latest_pose.pos(1), latest_pose.pos(2)));
-        tf::Pose map_in_robot = robot_in_map.inverse();
+        tf::Pose map_in_robot = robot_in_map;
         tf::Stamped<tf::Pose> map_in_odom;
         try
         {
@@ -424,13 +423,10 @@ void PoseOptimizer::publishRefinedMap()
             PointCloud::Ptr cloud_ptr = graph_scans_.at(i);
             PointCloud::Ptr cloud_out_ptr(new PointCloud());
 
-            std::cout << "Keyframe " << i << std::endl;
-            std::cout << keyframe_pose.toStringWithQuaternions("### ");
+            // std::cout << "Keyframe " << i << std::endl;
+            // std::cout << keyframe_pose.toStringWithQuaternions("### ");
 
             tf::Transform tf_keyframe_in_map = keyframe_pose.toTFTransform();
-            
-            // std::cout << "(" << tf_keyframe_in_map.getOrigin().getX() << ", " << tf_keyframe_in_map.getOrigin().getY() << ", " << tf_keyframe_in_map.getOrigin().getZ() << ")" << std::endl;
-            // std::cout << "(" << tf_keyframe_in_map.getRotation().x() << ", " << tf_keyframe_in_map.getRotation().y() << ", " << tf_keyframe_in_map.getRotation().z() << ", " << tf_keyframe_in_map.getRotation().w() << ")" << std::endl;
 
             try
             {

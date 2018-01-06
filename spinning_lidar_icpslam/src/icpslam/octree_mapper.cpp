@@ -88,21 +88,6 @@ void OctreeMapper::transformCloudToFixedFrame(pcl::PointCloud<pcl::PointXYZ>::Pt
         ROS_INFO("Transform from %s to %s not available!", source_frame.c_str(), target_frame.c_str());
 }
 
-void OctreeMapper::addCloudToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, std::string source_frame)
-{
-	// if(source_frame != map_frame_)
-	// {
-	// 	pcl::PointCloud<pcl::PointXYZ>::Ptr new_points_map(new pcl::PointCloud<pcl::PointXYZ>());
-	// 	transformCloudToFixedFrame(cloud_in, new_points_map, map_frame_, robot_frame_, ros::Time(0));
-	// 	addPointsToMap(new_points_map);
-	// }
-	// else
-	// {
-	// 	addPointsToMap(cloud_in);
-	// }
-	addPointsToMap(cloud_in);
-}
-
 void OctreeMapper::incrementCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
 	ROS_INFO("Map increment cloud callback!");
@@ -111,12 +96,12 @@ void OctreeMapper::incrementCloudCallback(const sensor_msgs::PointCloud2::ConstP
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);
 
 		// This should be done before
-		pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
-		voxel_filter.setInputCloud(input_cloud);
-		voxel_filter.setLeafSize(0.05, 0.05, 0.05);
-		voxel_filter.filter(*new_points);
+		// pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
+		// voxel_filter.setInputCloud(input_cloud);
+		// voxel_filter.setLeafSize(0.05, 0.05, 0.05);
+		// voxel_filter.filter(*new_points);
 
-	addCloudToMap(new_points, cloud_msg->header.frame_id);
+	addPointsToMap(input_cloud);
 
 	publishPointCloud(map_cloud_, map_frame_, ros::Time().now(), &map_cloud_pub_);
 }

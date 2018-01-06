@@ -156,8 +156,8 @@ public:
 	static Pose6DOF subtract(Pose6DOF &p1, Pose6DOF &p2)
 	{
 		Pose6DOF p3;
-		p3.pos = p1.pos - p1.rot.toRotationMatrix() * p2.pos;
-		p3.rot = p1.rot * p2.rot.inverse();
+		p3.pos = p1.pos - p2.pos;
+		p3.rot = p2.rot.inverse() * p1.rot;
 		p3.rot.normalize();
 		return p3;
 	}
@@ -214,6 +214,7 @@ public:
 		{ }
 		
 		Pose6DOF pose_in_tgt(tf_in_tgt, pose_in_src.time_stamp);
+		pose_in_tgt.cov = pose_in_src.cov;
 		return pose_in_tgt;
 	}
 

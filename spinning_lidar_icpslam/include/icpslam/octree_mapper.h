@@ -37,7 +37,7 @@ class OctreeMapper
 {
 private:
     // Constants for mapping
-    const float OCTREE_RESOLUTION = 0.4;
+    const float OCTREE_RESOLUTION = 0.3;
     const float MAX_INCREMENTS_QUEUE = 30;
 
     int verbosity_level_;
@@ -73,8 +73,6 @@ public:
     void initMap();
 
     void resetMap();
-
-    void addCloudToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, std::string source_frame);
 
     /* This function is inspired on https://github.com/erik-nelson/point_cloud_mapper */
     void addPointsToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);

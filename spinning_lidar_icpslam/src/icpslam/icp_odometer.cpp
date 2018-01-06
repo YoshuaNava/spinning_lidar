@@ -138,12 +138,11 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
 	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp);
 
-	if(robot_odom_poses_.size() == 0)
-		publishInitialMapTransform(pose_in_odom);
+	// if(robot_odom_poses_.size() == 0)
+		// publishInitialMapTransform(pose_in_odom);
 
 	if(!tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time().now()))
 		return;
-
 
 	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
 	robot_odom_poses_.push_back(pose_in_map);
@@ -164,18 +163,18 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
 	}
 
-	if(verbosity_level_ >= 2)
-	{
-		// std::cout << "Robot odometry says: " << pose_in_odom.toStringWithQuaternions("   ");
-		// std::cout << "In map, robot odometry says: " << pose_in_map.toStringWithQuaternions("   ");
-		// std::cout << std::endl;
-	}
-
 	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
 
 	robot_odom_path_.header.stamp = ros::Time().now();
 	robot_odom_path_.header.frame_id = map_frame_;
 	robot_odom_path_pub_.publish(robot_odom_path_);
+
+	if(verbosity_level_ >= 2)
+	{
+		std::cout << "Robot odometry says: " << pose_in_odom.toStringWithQuaternions("   ");
+		std::cout << "In map, robot odometry says: " << pose_in_map.toStringWithQuaternions("   ");
+		std::cout << std::endl;
+	}
 }
 
 void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
@@ -188,10 +187,13 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 	Pose6DOF prev_pose = getLatestPoseRobotOdometry();
 	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_odom);
+	new_pose.time_stamp = ros::Time().now();
 
 	icp_odom_poses_.push_back(new_pose);
-	insertPoseInPath(new_pose.toROSPose(), map_frame_, ros::Time().now(), icp_odom_path_);
+
 	publishOdometry(new_pose.pos, new_pose.rot, map_frame_, odom_frame_, ros::Time().now(), &icp_odom_pub_);
+
+	insertPoseInPath(new_pose.toROSPose(), map_frame_, ros::Time().now(), icp_odom_path_);
 	icp_odom_path_.header.stamp = ros::Time().now();
 	icp_odom_path_.header.frame_id = map_frame_;
 	icp_odom_path_pub_.publish(icp_odom_path_);

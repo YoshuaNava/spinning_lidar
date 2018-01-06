@@ -29,7 +29,6 @@ private:
     int verbosity_level_;
 
     uint curr_vertex_key_, curr_edge_key_;
-    std::map<uint, TimeStamp> graph_stamps_;
     std::map<uint, PointCloud::Ptr> graph_scans_;
     std::map<uint, Pose6DOF> graph_poses_;
     std::map<uint, std::pair<uint, uint>> graph_edges_;

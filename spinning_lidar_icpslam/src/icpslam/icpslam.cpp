@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 	prev_vertex_key = 0;
 	curr_vertex_key = 0;
 
-	Pose6DOF robot_odom_pose, prev_keyframe_pose, icp_odom_pose, prev_vertex_pose;
+	Pose6DOF robot_odom_pose, prev_robot_odom_pose, icp_odom_pose, prev_keyframe_pose;
 
 	long num_keyframes = 0, num_vertices = 0;
 	int iter = 0;
@@ -41,14 +41,17 @@ int main(int argc, char** argv)
 			Pose6DOF icp_latest_transform;
 
 			icp_odometer.getLatestCloud(&cloud, &icp_latest_transform, &icp_odom_pose, &robot_odom_pose, &new_transform);
-
-			Eigen::Vector3d keyframe_pose_diff = icp_odom_pose.pos - prev_keyframe_pose.pos;
-			Eigen::Vector3d vertex_pose_diff = robot_odom_pose.pos - prev_vertex_pose.pos;
 			
-			if(((keyframe_pose_diff.norm() > KFS_DIST_THRESH) || (num_keyframes == 0)) && (cloud->points.size()>0))
+			// double keyframe_pose_diff = Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose);
+			// std::cout << "current icp odom pose\n" << icp_odom_pose.toStringWithEulerAngles("   ") << std::endl;
+			// std::cout << "prev icp odom pose\n" << prev_keyframe_pose.toStringWithEulerAngles("   ") << std::endl;
+			// std::cout << "pose diff\n" << Pose6DOF::subtract(icp_odom_pose, prev_keyframe_pose).toStringWithEulerAngles("   ") << std::endl;
+			// ROS_ERROR("norm of pose diff = %f", keyframe_pose_diff);
+
+			if(((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) || (num_keyframes == 0)) && (cloud->points.size()>0))
 			{
 				prev_keyframe_pose = icp_odom_pose;
-				prev_vertex_pose = robot_odom_pose;
+				prev_robot_odom_pose = robot_odom_pose;
 				num_keyframes++;
 				num_vertices++;
 				pose_optimizer.addNewVertex(&cloud, icp_latest_transform, icp_odom_pose, true, &curr_vertex_key);
@@ -60,9 +63,9 @@ int main(int argc, char** argv)
 			}
 			else 
 			{
-				if ((vertex_pose_diff.norm() > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+				if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
 				{
-					prev_vertex_pose = robot_odom_pose;
+					prev_robot_odom_pose = robot_odom_pose;
 					num_vertices++;
 					pose_optimizer.addNewVertex(&cloud, icp_latest_transform, robot_odom_pose, false, &curr_vertex_key);
 					// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
