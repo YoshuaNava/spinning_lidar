@@ -166,7 +166,7 @@ void PoseOptimizer::addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_tr
     curr_vertex_key_++;
 }
 
-void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key)
+void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key)
 {
     *key = curr_edge_key_;
 
@@ -176,7 +176,7 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
     Pose6DOF e_pose(e_T);
     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
 
-    Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
+    Eigen::Matrix< double, 6, 6 > meas_info = cov.inverse();
 	g2o::EdgeSE3* edge = new g2o::EdgeSE3();
     edge->setId(*key);
     edge->vertices()[0] = vertex1;

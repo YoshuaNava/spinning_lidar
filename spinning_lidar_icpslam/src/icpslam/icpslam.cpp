@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	
 			if ((num_vertices > 1) && (prev_vertex_key < curr_vertex_key))
 			{
-				pose_optimizer.addNewEdge(robot_odom_pose, prev_vertex_key, curr_vertex_key, &edge_key);
+				pose_optimizer.addNewEdge(robot_odom_pose.cov, prev_vertex_key, curr_vertex_key, &edge_key);
 				// ROS_INFO("	Edge inserted! ID %d", edge_key);
 				// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 			}
@@ -83,10 +83,9 @@ int main(int argc, char** argv)
 			{
 				bool success = pose_optimizer.optimizeGraph();
 
-				if(success)
+				// if(success)
 				{
 					pose_optimizer.refinePoseGraph();
-					// octree_mapper.resetMap();
 					pose_optimizer.publishRefinedMap();
 				}
 				run_pose_optimization = false;

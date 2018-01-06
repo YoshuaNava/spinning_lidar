@@ -11,14 +11,6 @@
 #include "utils/geometric_utils.h"
 
 
-
-// std::ostream& operator <<(std::ostream &os, const Pose6DOF& pose)
-// { 
-// 	os << "Pos = (" << pose.pos(0) << ", " << pose.pos(1) << ", " << pose.pos(2) << ")\n";
-// 	os << "Rot = (" << pose.rot.x() << ", " << pose.rot.y() << ", " << pose.rot.z() << ", " << pose.rot.w() << ")\n";
-// 	return os;
-// }
-
 geometry_msgs::Point getROSPointFromPose6DOF(Pose6DOF pose)
 {
 	geometry_msgs::Point p;
@@ -54,11 +46,6 @@ tf::Pose getTFPoseFromROSPose(geometry_msgs::Pose pose)
 	return transform;
 }
 
-tf::Transform getInverseTFTransformFromROSOdometry(nav_msgs::Odometry odom_msg)
-{
-	return getTFTransformFromROSOdometry(odom_msg).inverse();
-}
-
 tf::Transform getTFTransformFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond q)
 {
 	tf::Transform transform;
@@ -73,19 +60,6 @@ tf::Pose getTFPoseFromPositionQuaternion(Eigen::Vector3d pos, Eigen::Quaterniond
 	pose.setOrigin(tf::Vector3(pos(0), pos(1), pos(2)));
 	pose.setRotation(tf::Quaternion(q.x(), q.y(), q.z(), q.w()));
 	return pose;
-}
-
-Eigen::Vector3d getTranslationFromTMatrix(Eigen::Matrix4d &T)
-{
-	Eigen::Vector3d translation(-T(0,3), -T(1,3), -T(2,3));
-	return translation;
-}
-
-Eigen::Quaterniond getQuaternionFromTMatrix(Eigen::Matrix4d &T)
-{
-	Eigen::Matrix3d rot = T.block(0, 0, 3, 3).transpose();
-	Eigen::Quaterniond q(rot);
-	return q;
 }
 
 geometry_msgs::Pose getROSPoseFromPosQuat(Eigen::Vector3d pos, Eigen::Quaterniond q)
@@ -117,7 +91,6 @@ Eigen::Quaterniond getQuaternionFromROSPose(geometry_msgs::Pose pose)
 	return q;
 }
 
-
 std::string getStringFromVector3d(Eigen::Vector3d vector)
 {
 	std::string output = "(";
@@ -138,7 +111,6 @@ std::string getStringFromQuaternion(Eigen::Quaterniond q)
 	output += std::to_string(q.norm());
 	return output;
 }
-
 
 tf::Pose differenceBetweenPoses(geometry_msgs::Pose p1, geometry_msgs::Pose p2)
 {

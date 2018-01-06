@@ -69,7 +69,7 @@ public:
 
     void addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, bool is_keyframe, uint *key);
 
-    void addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key);
+    void addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key);
 
     bool optimizeGraph();
 

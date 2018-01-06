@@ -70,14 +70,10 @@ public:
 
     void registerSubscribers();
 
-    void initMap();
-
     void resetMap();
 
     /* This function is inspired on https://github.com/erik-nelson/point_cloud_mapper */
     void addPointsToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud);
-
-    void transformCloudToFixedFrame(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_out, std::string target_frame, std::string source_frame, ros::Time target_time);
 
     void incrementCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 

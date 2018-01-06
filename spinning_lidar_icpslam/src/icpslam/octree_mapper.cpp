@@ -13,7 +13,7 @@ OctreeMapper::OctreeMapper(ros::NodeHandle nh) :
 
 void OctreeMapper::init()
 {
-	initMap();
+	resetMap();
 	loadParameters();
 	advertisePublishers();
 	registerSubscribers();
@@ -46,11 +46,6 @@ void OctreeMapper::registerSubscribers()
 	increment_cloud_sub_ = nh_.subscribe(increment_cloud_topic_, 10, &OctreeMapper::incrementCloudCallback, this);
 }
 
-void OctreeMapper::initMap()
-{
-	map_octree_->setInputCloud(map_cloud_);
-}
-
 void OctreeMapper::resetMap()
 {
 	map_cloud_.reset(new pcl::PointCloud<pcl::PointXYZ>());
@@ -71,35 +66,12 @@ void OctreeMapper::addPointsToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr input_clou
 	}
 }
 
-void OctreeMapper::transformCloudToFixedFrame(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud_out, std::string target_frame, std::string source_frame, ros::Time target_time)
-{
-    if(tf_listener_.canTransform(target_frame, source_frame, target_time))
-        try
-        {
-            tf::StampedTransform transform;
-            tf_listener_.lookupTransform(target_frame, source_frame, target_time, transform);
-            pcl_ros::transformPointCloud(*cloud_in, *cloud_out, transform);
-        }
-        catch (tf::TransformException ex)
-        {
-            ROS_ERROR("%s", ex.what());
-        }
-    else
-        ROS_INFO("Transform from %s to %s not available!", source_frame.c_str(), target_frame.c_str());
-}
-
 void OctreeMapper::incrementCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
 	ROS_INFO("Map increment cloud callback!");
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>()), new_points(new pcl::PointCloud<pcl::PointXYZ>());
 
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);
-
-		// This should be done before
-		// pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
-		// voxel_filter.setInputCloud(input_cloud);
-		// voxel_filter.setLeafSize(0.05, 0.05, 0.05);
-		// voxel_filter.filter(*new_points);
 
 	addPointsToMap(input_cloud);
 
