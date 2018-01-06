@@ -112,7 +112,7 @@ public:
 	{
 		time_stamp = ros::Time(0);
 		pos = Eigen::Vector3d(0,0,0);
-		rot = Eigen::Quaterniond(0,0,0,1);
+		rot = Eigen::Quaterniond(1,0,0,0);
 		cov = Eigen::MatrixXd::Zero(6,6);
 		cov.setIdentity();
 		return *this;
@@ -167,7 +167,7 @@ public:
 		Pose6DOF pose;
 		pose.time_stamp = ros::Time(0);
 		pose.pos = Eigen::Vector3d(0,0,0);
-		pose.rot = Eigen::Quaterniond(0,0,0,1);
+		pose.rot = Eigen::Quaterniond(1,0,0,0);
 		pose.cov = Eigen::MatrixXd::Zero(6,6);
 		pose.cov.setIdentity();
 		return pose;
@@ -213,7 +213,7 @@ public:
 		catch(tf::TransformException e)
 		{ }
 		
-		Pose6DOF pose_in_tgt(tf_in_tgt);
+		Pose6DOF pose_in_tgt(tf_in_tgt, pose_in_src.time_stamp);
 		return pose_in_tgt;
 	}
 
@@ -222,6 +222,7 @@ public:
 		pos = Eigen::Vector3d(T(0,3), T(1,3), T(2,3));
 		Eigen::Matrix3d R = T.block(0, 0, 3, 3); //.transpose();
 		rot = Eigen::Quaterniond(R);
+		rot.normalize();
 	}
 
 	void fromTMatrixInFixedFrame(Eigen::Matrix4d &T, std::string tgt_frame, std::string src_frame, tf::TransformListener *tf_listener)
@@ -239,13 +240,15 @@ public:
 	void fromROSPose(geometry_msgs::Pose &pose)
 	{
 		pos = Eigen::Vector3d(pose.position.x, pose.position.y, pose.position.z);
-		rot = Eigen::Quaterniond(pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w);
+		rot = Eigen::Quaterniond(pose.orientation.w, pose.orientation.x, pose.orientation.y, pose.orientation.z);
+		rot.normalize();
 	}
 
 	void fromROSPoseWithCovariance(geometry_msgs::PoseWithCovariance &pose_cov)
 	{
 		pos = Eigen::Vector3d(pose_cov.pose.position.x, pose_cov.pose.position.y, pose_cov.pose.position.z);
-		rot = Eigen::Quaterniond(pose_cov.pose.orientation.x, pose_cov.pose.orientation.y, pose_cov.pose.orientation.z, pose_cov.pose.orientation.w);
+		rot = Eigen::Quaterniond(pose_cov.pose.orientation.w, pose_cov.pose.orientation.x, pose_cov.pose.orientation.y, pose_cov.pose.orientation.z);
+		rot.normalize();
 		double* cov_arr = pose_cov.covariance.data();
 		cov = Eigen::Matrix<double, 6, 6>(cov_arr);
 	}
@@ -253,19 +256,22 @@ public:
 	void fromROSTransform(geometry_msgs::Transform &transform)
 	{
 		pos = Eigen::Vector3d(transform.translation.x, transform.translation.y, transform.translation.z);
-		rot = Eigen::Quaterniond(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w);
+		rot = Eigen::Quaterniond(transform.rotation.w, transform.rotation.x, transform.rotation.y, transform.rotation.z);
+		rot.normalize();
 	}
 
 	void fromTFPose(tf::Pose &pose)
 	{
 		pos = Eigen::Vector3d(pose.getOrigin().getX(), pose.getOrigin().getY(), pose.getOrigin().getZ());
-		rot = Eigen::Quaterniond(pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z(), pose.getRotation().w());
+		rot = Eigen::Quaterniond(pose.getRotation().w(), pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z());
+		rot.normalize();
 	}
 	
 	void fromTFTransform(tf::Transform &transform)
 	{
 		pos = Eigen::Vector3d(transform.getOrigin().getX(), transform.getOrigin().getY(), transform.getOrigin().getZ());
-		rot = Eigen::Quaterniond(transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w());
+		rot = Eigen::Quaterniond(transform.getRotation().w(), transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z());
+		rot.normalize();
 	}
 
 	Eigen::Matrix4d toTMatrix()

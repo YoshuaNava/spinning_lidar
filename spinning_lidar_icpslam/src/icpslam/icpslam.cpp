@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 	OctreeMapper octree_mapper(nh);
 
 	bool run_pose_optimization = false;
-	int keyframes_window = 2;
+	int keyframes_window = 5;
 
 	uint curr_vertex_key, prev_vertex_key, edge_key;
 	prev_vertex_key = 0;
@@ -82,8 +82,8 @@ int main(int argc, char** argv)
 
 				if(success)
 				{
-					// pose_optimizer.refinePoseGraph();
-					octree_mapper.resetMap();
+					pose_optimizer.refinePoseGraph();
+					// octree_mapper.resetMap();
 					pose_optimizer.publishRefinedMap();
 				}
 				run_pose_optimization = false;

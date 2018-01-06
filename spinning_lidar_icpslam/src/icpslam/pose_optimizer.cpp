@@ -173,7 +173,6 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
 	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
     Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
     Pose6DOF e_pose(e_T);
-    // e_pose.pos = -1.0 * e_pose.pos;
     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
 
     Eigen::Matrix< double, 6, 6 > meas_info = pose.cov.inverse();
@@ -202,7 +201,7 @@ void PoseOptimizer::addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key
 
 bool PoseOptimizer::optimizeGraph()
 {
-    // optimizer_->save("icpslam_posegraph_before.g2o");
+    optimizer_->save("icpslam_posegraph_before.g2o");
     optimizer_->initializeOptimization();
     optimizer_->computeActiveErrors();
     optimizer_->setVerbose(true);
@@ -219,7 +218,7 @@ bool PoseOptimizer::optimizeGraph()
     ROS_INFO("Pose graph optimization finished after %i iterations.", iters);
     // std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
     
-    // optimizer_->save("icpslam_posegraph_after.g2o");
+    optimizer_->save("icpslam_posegraph_after.g2o");
 
     return true;
 }
@@ -426,18 +425,20 @@ void PoseOptimizer::publishRefinedMap()
             PointCloud::Ptr cloud_out_ptr(new PointCloud());
 
             std::cout << "Keyframe " << i << std::endl;
-            std::cout << keyframe_pose.toStringWithEulerAngles("### ");
+            std::cout << keyframe_pose.toStringWithQuaternions("### ");
 
-            tf::Transform tf_keyframe_in_map = keyframe_pose.toTFTransform().inverse();
+            tf::Transform tf_keyframe_in_map = keyframe_pose.toTFTransform();
+            
+            // std::cout << "(" << tf_keyframe_in_map.getOrigin().getX() << ", " << tf_keyframe_in_map.getOrigin().getY() << ", " << tf_keyframe_in_map.getOrigin().getZ() << ")" << std::endl;
+            // std::cout << "(" << tf_keyframe_in_map.getRotation().x() << ", " << tf_keyframe_in_map.getRotation().y() << ", " << tf_keyframe_in_map.getRotation().z() << ", " << tf_keyframe_in_map.getRotation().w() << ")" << std::endl;
+
             try
             {
-                // pcl_ros::transformPointCloud(*cloud_ptr, *cloud_out_ptr, tf_keyframe_in_map);
-                publishPointCloud(cloud_ptr, map_frame_, ros::Time().now(), &increment_cloud_pub_);
+                pcl_ros::transformPointCloud(*cloud_ptr, *cloud_out_ptr, tf_keyframe_in_map);
+                publishPointCloud(cloud_out_ptr, map_frame_, ros::Time().now(), &increment_cloud_pub_);
             }
             catch(tf::TransformException e)
             { }
-
-            // ros::Duration(1.0).sleep();
         }
     }
 }

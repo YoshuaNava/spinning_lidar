@@ -141,15 +141,18 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	if(robot_odom_poses_.size() == 0)
 		publishInitialMapTransform(pose_in_odom);
 
-	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);		
+	if(!tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time().now()))
+		return;
+
+
+	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
 	robot_odom_poses_.push_back(pose_in_map);
 
 	int num_poses = robot_odom_path_.poses.size();
 	if(num_poses > 0)
 	{
 		Pose6DOF prev_pose(robot_odom_path_.poses[num_poses-1].pose);
-		double dist = Pose6DOF::distanceEuclidean(pose_in_map, prev_pose);
-		if(dist < POSE_DIST_THRESH)
+		if(Pose6DOF::distanceEuclidean(pose_in_map, prev_pose) < POSE_DIST_THRESH)
 		{
 			return;
 		}
@@ -163,8 +166,9 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(verbosity_level_ >= 2)
 	{
-		std::cout << "Robot odometry position = " << getStringFromVector3d(pose_in_map.pos) << std::endl;
-		std::cout << "Robot odometry rotation = " << getStringFromQuaternion(pose_in_map.rot) << std::endl;
+		// std::cout << "Robot odometry says: " << pose_in_odom.toStringWithQuaternions("   ");
+		// std::cout << "In map, robot odometry says: " << pose_in_map.toStringWithQuaternions("   ");
+		// std::cout << std::endl;
 	}
 
 	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
@@ -181,11 +185,9 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	Pose6DOF transform_in_odom(T, ros::Time().now());
 	transform_in_odom.pos *= -1.0;
 	icp_latest_transform_ = transform_in_odom;
-	// Pose6DOF transform_in_map(T, map_frame_, odom_frame_, &tf_listener_, ros::Time().now());
 
 	Pose6DOF prev_pose = getLatestPoseRobotOdometry();
 	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_odom);
-	// Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_map);
 
 	icp_odom_poses_.push_back(new_pose);
 	insertPoseInPath(new_pose.toROSPose(), map_frame_, ros::Time().now(), icp_odom_path_);

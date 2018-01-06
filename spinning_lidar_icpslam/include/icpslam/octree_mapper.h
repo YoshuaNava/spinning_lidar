@@ -37,7 +37,7 @@ class OctreeMapper
 {
 private:
     // Constants for mapping
-    const float OCTREE_RESOLUTION = 0.2;
+    const float OCTREE_RESOLUTION = 0.4;
     const float MAX_INCREMENTS_QUEUE = 30;
 
     int verbosity_level_;
