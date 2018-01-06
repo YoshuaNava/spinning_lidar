@@ -16,6 +16,7 @@
 #include <pcl_ros/impl/transforms.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
 

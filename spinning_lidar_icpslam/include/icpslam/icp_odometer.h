@@ -2,8 +2,6 @@
 #ifndef ICP_ODOMETER_H
 #define ICP_ODOMETER_H
 
-#include "utils/geometric_utils.h"
-
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <geometry_msgs/Point.h>
@@ -20,6 +18,9 @@
 #include <pcl/point_types.h>
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+
+#include "utils/pose6DOF.h"
+#include "utils/geometric_utils.h"
 
 
 class ICPOdometer
@@ -76,19 +77,15 @@ public:
 
 	void registerSubscribers();
 
-	void publishInitialMapTransform();
+	void publishInitialMapTransform(Pose6DOF map_in_robot = Pose6DOF::getIdentity());
 
 	bool isOdomReady();
 
  	Pose6DOF getLatestPoseRobotOdometry(); 
 	
-	Pose6DOF getLatestPoseICPOdometry(); 
+	Pose6DOF getLatestPoseICPOdometry();
 
-	void getLatestPoseRobotOdometry(Pose6DOF *pose);
-
-	void getLatestPoseICPOdometry(Pose6DOF *pose);
-
-	void getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *last_transform, Pose6DOF *pose, bool *new_transform);
+	void getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *icp_pose, Pose6DOF *odom_pose, bool *new_transform);
 
 	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
 

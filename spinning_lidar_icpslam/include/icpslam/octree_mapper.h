@@ -27,6 +27,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/octree/octree_search.h>
 
+#include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
 

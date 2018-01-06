@@ -1,4 +1,5 @@
 
+#include "utils/pose6DOF.h"
 #include "icpslam/octree_mapper.h"
 
 
@@ -89,16 +90,17 @@ void OctreeMapper::transformCloudToFixedFrame(pcl::PointCloud<pcl::PointXYZ>::Pt
 
 void OctreeMapper::addCloudToMap(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in, std::string source_frame)
 {
-	if(source_frame != map_frame_)
-	{
-		pcl::PointCloud<pcl::PointXYZ>::Ptr new_points_map(new pcl::PointCloud<pcl::PointXYZ>());
-		transformCloudToFixedFrame(cloud_in, new_points_map, map_frame_, robot_frame_, ros::Time(0));	
-		addPointsToMap(new_points_map);
-	}
-	else
-	{
-		addPointsToMap(cloud_in);
-	}
+	// if(source_frame != map_frame_)
+	// {
+	// 	pcl::PointCloud<pcl::PointXYZ>::Ptr new_points_map(new pcl::PointCloud<pcl::PointXYZ>());
+	// 	transformCloudToFixedFrame(cloud_in, new_points_map, map_frame_, robot_frame_, ros::Time(0));
+	// 	addPointsToMap(new_points_map);
+	// }
+	// else
+	// {
+	// 	addPointsToMap(cloud_in);
+	// }
+	addPointsToMap(cloud_in);
 }
 
 void OctreeMapper::incrementCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)

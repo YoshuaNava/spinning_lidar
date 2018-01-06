@@ -7,7 +7,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
+#include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
+
 
 
 // std::ostream& operator <<(std::ostream &os, const Pose6DOF& pose)

@@ -1,4 +1,5 @@
 
+#include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
 #include "icpslam/icp_odometer.h"
@@ -40,7 +41,6 @@ void ICPOdometer::init()
 {
 	loadParameters();
 	advertisePublishers();
-	publishInitialMapTransform();
 	registerSubscribers();
 
 	ROS_INFO("ICP odometer initialized");
@@ -93,12 +93,12 @@ void ICPOdometer::registerSubscribers()
 	assembled_cloud_sub_ = nh_.subscribe(assembled_cloud_topic_, 1, &ICPOdometer::assembledCloudCallback, this);
 }
 
-void ICPOdometer::publishInitialMapTransform()
+void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
 {
-	tf::Transform transform;
-	transform.setOrigin( tf::Vector3(0, 0, 0) );
-    transform.setRotation( tf::Quaternion(0, 0, 0, 1) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, map_frame_));
+	tf::Transform tf_map_in_odom;
+	tf_map_in_odom.setOrigin( tf::Vector3(map_in_robot.pos(0), map_in_robot.pos(1), map_in_robot.pos(2)) );
+    tf_map_in_odom.setRotation( tf::Quaternion(map_in_robot.rot.x(), map_in_robot.rot.y(), map_in_robot.rot.z(), map_in_robot.rot.w()) );
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_map_in_odom.inverse(), ros::Time::now(), odom_frame_, map_frame_));
 }
 
 bool ICPOdometer::isOdomReady()
@@ -107,31 +107,27 @@ bool ICPOdometer::isOdomReady()
 }
 
 Pose6DOF ICPOdometer::getLatestPoseRobotOdometry() 
-{ 
-  return robot_odom_poses_.back(); 
+{
+	return robot_odom_poses_.back(); 
 } 
 
 Pose6DOF ICPOdometer::getLatestPoseICPOdometry() 
-{ 
-  return icp_odom_poses_.back(); 
-} 
-
-void ICPOdometer::getLatestPoseRobotOdometry(Pose6DOF *pose)
 {
-	*pose = robot_odom_poses_.back();
+	return icp_odom_poses_.back();
 }
 
-void ICPOdometer::getLatestPoseICPOdometry(Pose6DOF *pose)
+void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *icp_pose, Pose6DOF *odom_pose, bool *new_transform)
 {
-	*pose = icp_odom_poses_.back();
-}
-
-void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *pose, bool *new_transform)
-{
-	*new_transform = new_transform_;
-	*cloud = prev_cloud_;
+	**cloud = *prev_cloud_;
 	*latest_transform = icp_latest_transform_;
-	*pose = icp_odom_poses_.back();
+
+	if(icp_odom_poses_.size() > 0)
+		*icp_pose = icp_odom_poses_.back();
+	else
+		*icp_pose = robot_odom_poses_.back();
+
+	*odom_pose = robot_odom_poses_.back();
+	*new_transform = new_transform_;
 
 	new_transform_ = false;
 }
@@ -141,7 +137,11 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	// ROS_INFO("Robot odometry callback!");
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
 	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp);
-	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+
+	if(robot_odom_poses_.size() == 0)
+		publishInitialMapTransform(pose_in_odom);
+
+	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);		
 	robot_odom_poses_.push_back(pose_in_map);
 
 	int num_poses = robot_odom_path_.poses.size();
@@ -178,13 +178,14 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
 	// ROS_INFO("ICP odometry update!");
 	new_transform_ = true;
-
-	Pose6DOF transform_in_odom(T);
-	Pose6DOF transform_in_map(T, map_frame_, odom_frame_, &tf_listener_);
-	icp_latest_transform_ = transform_in_map;
+	Pose6DOF transform_in_odom(T, ros::Time().now());
+	transform_in_odom.pos *= -1.0;
+	icp_latest_transform_ = transform_in_odom;
+	// Pose6DOF transform_in_map(T, map_frame_, odom_frame_, &tf_listener_, ros::Time().now());
 
 	Pose6DOF prev_pose = getLatestPoseRobotOdometry();
-	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_map);
+	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_odom);
+	// Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_map);
 
 	icp_odom_poses_.push_back(new_pose);
 	insertPoseInPath(new_pose.toROSPose(), map_frame_, ros::Time().now(), icp_odom_path_);
@@ -253,6 +254,6 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 		}
 
 	}
-
+	
 	*prev_cloud_ = *curr_cloud_;
 }

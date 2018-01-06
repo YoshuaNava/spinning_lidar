@@ -2,11 +2,10 @@
 #ifndef LOOP_CLOSURE_HANDLER_H
 #define LOOP_CLOSURE_HANDLER_H
 
-#include "utils/geometric_utils.h"
-
 #include <ros/ros.h>
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/ColorRGBA.h>
+#include <gazebo_msgs/GetModelState.h>      // For using the Gazebo absolute pos reference when tuning the algorithm
 #include <visualization_msgs/Marker.h>
 #include <tf/transform_broadcaster.h>
 #include <pcl/point_cloud.h>
@@ -18,7 +17,8 @@
 #include "g2o/types/icp/types_icp.h"
 #include "g2o/types/slam3d/types_slam3d.h"
 
-#include <gazebo_msgs/GetModelState.h>
+#include "utils/pose6DOF.h"
+#include "utils/geometric_utils.h"
 
 class PoseOptimizer
 {
@@ -68,7 +68,7 @@ public:
 
     void advertisePublishers();
 
-    void addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, bool is_keyframe, uint *key);
+    void addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF odom_pose, bool is_keyframe, uint *key);
 
     void addNewEdge(Pose6DOF pose, uint vertex1_key, uint vertex2_key, uint *key);
 

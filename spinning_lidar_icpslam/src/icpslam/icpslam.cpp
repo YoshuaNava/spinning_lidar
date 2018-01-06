@@ -1,12 +1,11 @@
 
-
 #include "icpslam/icp_odometer.h"
 #include "icpslam/pose_optimizer.h"
 #include "icpslam/octree_mapper.h"
 
 
 const double KFS_DIST_THRESH = 0.5;
-const double VERTEX_DIST_THRESH = 0.05;
+const double VERTEX_DIST_THRESH = 0.1;
 
 
 
@@ -22,7 +21,7 @@ int main(int argc, char** argv)
 	OctreeMapper octree_mapper(nh);
 
 	bool run_pose_optimization = false;
-	int keyframes_window = 5;
+	int keyframes_window = 2;
 
 	uint curr_vertex_key, prev_vertex_key, edge_key;
 	prev_vertex_key = 0;
@@ -37,13 +36,11 @@ int main(int argc, char** argv)
 		if(icp_odometer.isOdomReady())
 		{
 			// ROS_INFO("Iteration %d", iter);
-			bool is_keyframe = false;
 			bool new_transform = false;
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 			Pose6DOF icp_latest_transform;
 
-			icp_odometer.getLatestPoseRobotOdometry(&robot_odom_pose);
-			icp_odometer.getLatestCloud(&cloud, &icp_latest_transform, &icp_odom_pose, &new_transform);
+			icp_odometer.getLatestCloud(&cloud, &icp_latest_transform, &icp_odom_pose, &robot_odom_pose, &new_transform);
 
 			Eigen::Vector3d keyframe_pose_diff = icp_odom_pose.pos - prev_keyframe_pose.pos;
 			Eigen::Vector3d vertex_pose_diff = robot_odom_pose.pos - prev_vertex_pose.pos;
@@ -54,20 +51,22 @@ int main(int argc, char** argv)
 				prev_vertex_pose = robot_odom_pose;
 				num_keyframes++;
 				num_vertices++;
-				is_keyframe = true;
-				pose_optimizer.addNewVertex(&cloud, icp_odom_pose, is_keyframe, &curr_vertex_key);
+				pose_optimizer.addNewVertex(&cloud, icp_latest_transform, icp_odom_pose, true, &curr_vertex_key);
 				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
 				// ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
 				
 				if(num_keyframes % keyframes_window == 0)
 					run_pose_optimization = true;
 			}
-			else //if (vertex_pose_diff.norm() > VERTEX_DIST_THRESH)
+			else 
 			{
-				prev_vertex_pose = robot_odom_pose;
-				num_vertices++;
-				pose_optimizer.addNewVertex(&cloud, robot_odom_pose, is_keyframe, &curr_vertex_key);
-				// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
+				if ((vertex_pose_diff.norm() > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+				{
+					prev_vertex_pose = robot_odom_pose;
+					num_vertices++;
+					pose_optimizer.addNewVertex(&cloud, icp_latest_transform, robot_odom_pose, false, &curr_vertex_key);
+					// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
+				}
 			}
 	
 			if ((num_vertices > 1) && (prev_vertex_key < curr_vertex_key))
@@ -83,7 +82,7 @@ int main(int argc, char** argv)
 
 				if(success)
 				{
-					pose_optimizer.refinePoseGraph();
+					// pose_optimizer.refinePoseGraph();
 					octree_mapper.resetMap();
 					pose_optimizer.publishRefinedMap();
 				}
