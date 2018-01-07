@@ -25,13 +25,13 @@
 		<param name="graph_vertices_topic" type="string" value="/icpslam/graph_vertices" />
 		<param name="graph_keyframes_topic" type="string" value="/icpslam/graph_keyframes" />
 
-		<param name="publish_map_transform" type="bool" value="true" />
+		<param name="publish_map_transform" type="bool" value="false" />
     </node>
 
 
     <node name="gazebo_ref_pub_node" pkg="spinning_lidar_icpslam" type="gazebo_ref_frame_pub" output="screen">
-        <param name="parent_frame" type="string" value="world" />
-        <param name="child_frame" type="string" value="map" />
+        <param name="parent_frame" type="string" value="map" />
+        <param name="child_frame" type="string" value="odom" />
         <param name="robot_frame" type="string" value="base_link" />
 		<param name="robot_name" type="string" value="ridgeback_yumi" />
     </node>

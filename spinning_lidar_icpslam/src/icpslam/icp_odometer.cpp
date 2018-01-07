@@ -102,15 +102,29 @@ void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
     tf_broadcaster_.sendTransform(tf::StampedTransform(tf_map_in_odom.inverse(), ros::Time::now(), odom_frame_, map_frame_));
 }
 
+void ICPOdometer::publishDebugTransform(Pose6DOF frame_in_robot)
+{
+	// ROS_INFO("Map transform callback!");
+	tf::Transform tf_frame_in_robot;
+	tf_frame_in_robot.setOrigin( tf::Vector3(frame_in_robot.pos(0), frame_in_robot.pos(1), frame_in_robot.pos(2)) );
+    tf_frame_in_robot.setRotation( tf::Quaternion(frame_in_robot.rot.x(), frame_in_robot.rot.y(), frame_in_robot.rot.z(), frame_in_robot.rot.w()) );
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot, ros::Time::now(), odom_frame_, "debug_frame"));
+}
+
 bool ICPOdometer::isOdomReady()
 {
 	return robot_odom_inited_;
 }
 
+Pose6DOF ICPOdometer::getFirstPoseRobotOdometry()
+{
+	return robot_odom_poses_.front(); 
+}
+
 Pose6DOF ICPOdometer::getLatestPoseRobotOdometry() 
 {
 	return robot_odom_poses_.back(); 
-} 
+}
 
 Pose6DOF ICPOdometer::getLatestPoseICPOdometry() 
 {
@@ -140,7 +154,15 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp);
 
 	if(robot_odom_poses_.size() == 0)
+	{
 		publishInitialMapTransform(pose_in_odom);
+		rodom_first_pose = pose_in_odom;
+	}
+	else
+	{
+		Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_odom, rodom_first_pose);
+		publishDebugTransform(origin_diff);
+	}
 
 
 	Pose6DOF pose_in_map;
@@ -163,7 +185,6 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	}
 	else
 	{
-		ROS_INFO("OoooooooooooHHHH");
 		icp_odom_poses_.push_back(pose_in_map);
 		robot_odom_inited_ = true;
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);

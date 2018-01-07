@@ -67,7 +67,9 @@ public:
 
     void advertisePublishers();
 
-    void addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, bool is_keyframe, uint *key);
+    void addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key);
+
+    void addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key);
 
     void addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key);
 

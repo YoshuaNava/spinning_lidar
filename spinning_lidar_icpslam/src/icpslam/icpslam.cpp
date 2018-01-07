@@ -54,30 +54,41 @@ int main(int argc, char** argv)
 				prev_robot_odom_pose = robot_odom_pose;
 				num_keyframes++;
 				num_vertices++;
-				pose_optimizer.addNewVertex(&cloud, icp_latest_transform, icp_odom_pose, true, &curr_vertex_key);
+				pose_optimizer.addNewKeyframeVertex(&cloud, icp_latest_transform, icp_odom_pose, &curr_vertex_key);
 				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
-				// ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
+				ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
 				
-				if(num_keyframes % keyframes_window == 0)
-					run_pose_optimization = true;
-			}
-			else 
-			{
-				if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+				if((curr_vertex_key > prev_vertex_key) && (prev_vertex_key > 0))
 				{
-					prev_robot_odom_pose = robot_odom_pose;
-					num_vertices++;
-					pose_optimizer.addNewVertex(&cloud, icp_latest_transform, robot_odom_pose, false, &curr_vertex_key);
-					// ROS_INFO("	Vertex inserted! ID %d", curr_vertex_key);
+					Eigen::Matrix<double,6,6> covariance = Eigen::MatrixXd::Zero(6,6);
+					for (int i = 0; i < 3; ++i)
+						covariance(i, i) = 0.01;
+					for (int i = 3; i < 6; ++i)
+						covariance(i, i) = 0.004;
+					pose_optimizer.addNewEdge(covariance, prev_vertex_key, curr_vertex_key, &edge_key);
+					ROS_INFO("	Edge inserted! ID %d", edge_key);
+					ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 				}
+
+				if(num_keyframes % keyframes_window == 0)
+						run_pose_optimization = true;
+			}
+
+			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+			{
+				prev_robot_odom_pose = robot_odom_pose;
+				num_vertices++;
+				pose_optimizer.addNewOdometryVertex(&cloud, robot_odom_pose, &curr_vertex_key);
+				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key);
+
+
+				pose_optimizer.addNewEdge(robot_odom_pose.cov, prev_vertex_key, curr_vertex_key, &edge_key);
+				
+				ROS_INFO("	Edge inserted! ID %d", edge_key);
+				ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 			}
 	
-			if ((num_vertices > 1) && (prev_vertex_key < curr_vertex_key))
-			{
-				pose_optimizer.addNewEdge(robot_odom_pose.cov, prev_vertex_key, curr_vertex_key, &edge_key);
-				// ROS_INFO("	Edge inserted! ID %d", edge_key);
-				// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
-			}
+
 
 			if(run_pose_optimization)
 			{

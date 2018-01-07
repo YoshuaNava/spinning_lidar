@@ -135,20 +135,42 @@ void PoseOptimizer::setGraphMarkersProperties()
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */
-void PoseOptimizer::addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, bool is_keyframe, uint *key)
+void PoseOptimizer::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key)
 {
     *key = curr_vertex_key_;
+    graph_scans_.insert(std::pair<uint, PointCloud::Ptr>(*key, *new_cloud_ptr));
+    graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
 
     g2o::VertexSE3* v = new g2o::VertexSE3();
     v->setId(*key);
     g2o::SE3Quat se3_transform(pose.rot, pose.pos);
     v->setEstimate( se3_transform );
 
-    if(is_keyframe)
+    if(curr_vertex_key_ == 0)
     {
-        graph_scans_.insert(std::pair<uint, PointCloud::Ptr>(*key, *new_cloud_ptr));
-        // v->setMarginalized(true);
+        v->setFixed(true);
     }
+    
+    // v->setMarginalized(true);
+    optimizer_->addVertex( v );
+
+    curr_vertex_key_++;
+}
+
+
+/* Inspired on mrsmap by Jurg Stuckler */
+void PoseOptimizer::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key)
+{
+    *key = curr_vertex_key_;
+    graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
+
+    if(graph_poses_.size() == 0)
+        latest_pose = pose;
+
+    g2o::VertexSE3* v = new g2o::VertexSE3();
+    v->setId(*key);
+    g2o::SE3Quat se3_transform(pose.rot, pose.pos);
+    v->setEstimate( se3_transform );
 
     if(curr_vertex_key_ == 0)
     {
@@ -156,11 +178,6 @@ void PoseOptimizer::addNewVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_tr
     }
     
     optimizer_->addVertex( v );
-
-    graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
-
-    if(graph_poses_.size() == 0)
-        latest_pose = pose;
 
     curr_vertex_key_++;
 }
@@ -181,6 +198,8 @@ void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint verte
     edge->vertices()[0] = vertex1;
 	edge->vertices()[1] = vertex2;
 	edge->setMeasurement( se3_pose );
+
+    std::cout << "edge inverse covariance \n" << meas_info << std::endl;
 	edge->setInformation( meas_info );
 
     bool success = optimizer_->addEdge( edge );
@@ -258,7 +277,7 @@ void PoseOptimizer::refineEdges()
         Pose6DOF e_pose(e_T);
         e_pose.pos = e_pose.pos;
         g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
-        // edge->setMeasurement(se3_pose);
+        edge->setMeasurement(se3_pose);
 
         edge_key++;
     }

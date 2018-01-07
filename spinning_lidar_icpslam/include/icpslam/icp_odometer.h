@@ -59,7 +59,7 @@ private:
 
 	// Translations and rotations estimated by ICP
 	bool new_transform_;
-	Pose6DOF icp_latest_transform_;
+	Pose6DOF rodom_first_pose, icp_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
 	std::vector<Pose6DOF> robot_odom_poses_;
 	tf::TransformListener tf_listener_;
@@ -78,8 +78,12 @@ public:
 	void registerSubscribers();
 
 	void publishInitialMapTransform(Pose6DOF map_in_robot = Pose6DOF::getIdentity());
+	
+	void publishDebugTransform(Pose6DOF frame_in_robot);
 
 	bool isOdomReady();
+
+	Pose6DOF getFirstPoseRobotOdometry();
 
  	Pose6DOF getLatestPoseRobotOdometry(); 
 	
