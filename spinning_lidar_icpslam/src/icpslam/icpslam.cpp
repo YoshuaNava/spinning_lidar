@@ -12,7 +12,7 @@ const double VERTEX_DIST_THRESH = 0.1;
 int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "icpslam");
-	ros::NodeHandle nh;
+	ros::NodeHandle nh("~");
 
 
 	ROS_INFO("#####       ICPSLAM         #####");	

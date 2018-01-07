@@ -18,7 +18,6 @@
 #include <visualization_msgs/MarkerArray.h>
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
-#include <gazebo_msgs/GetModelState.h>      // For using the Gazebo absolute pos reference when tuning the algorithm
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
@@ -85,11 +84,12 @@ void PoseOptimizer::loadParameters()
 	nh_.param("odom_frame", odom_frame_, std::string("odom"));
 	nh_.param("robot_frame", robot_frame_, std::string("base_link"));
 	nh_.param("laser_frame", laser_frame_, std::string("laser"));
+    nh_.param("publish_map_transform", publish_map_transform_, true);
 
 	nh_.param("graph_edges_topic", graph_edges_topic_, std::string("icpslam/graph_edges"));
     nh_.param("graph_vertices_topic", graph_vertices_topic_, std::string("icpslam/graph_vertices"));
     nh_.param("graph_keyframes_topic", graph_keyframes_topic_, std::string("icpslam/graph_keyframes"));
-    nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("spinning_lidar/increment_cloud"));
+    nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("icpslam/increment_cloud"));
 }
 
 void PoseOptimizer::advertisePublishers()
@@ -99,9 +99,8 @@ void PoseOptimizer::advertisePublishers()
     graph_keyframes_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_keyframes_topic_, 1);
     increment_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(increment_cloud_topic_, 1);
 
-    gazebo_map_service_ = nh_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
-    map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::gazeboMapTransformCallback, this);
-    // map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
+    if(publish_map_transform_)
+        map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
 
     setGraphMarkersProperties();
 }
@@ -365,34 +364,9 @@ void PoseOptimizer::publishPoseGraphMarkers()
     
 }
 
-void PoseOptimizer::gazeboMapTransformCallback(const ros::TimerEvent&)
-{
-    gazebo_msgs::GetModelState srv;
-    srv.request.model_name = "ridgeback_yumi";
-
-    if(gazebo_map_service_.call(srv))
-    {
-        // Correct estimation of map->odom from map->robot
-        tf::Pose robot_in_map = getTFPoseFromROSPose(srv.response.pose);
-        tf::Pose map_in_robot = robot_in_map.inverse();
-        tf::Stamped<tf::Pose> map_in_odom;
-        try
-        {
-            tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(map_in_robot, ros::Time(0), robot_frame_), map_in_odom);
-        }
-        catch(tf::TransformException e)
-        { }
-
-        tf::Transform transform;
-        transform.setOrigin( map_in_odom.getOrigin() );
-        transform.setRotation( map_in_odom.getRotation() );
-
-        tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, map_frame_));
-    }
-}
-
 void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
 {
+    // ROS_INFO("Map transform callback");
     tf::Transform transform;
     if(graph_poses_.size() > 0)
     {

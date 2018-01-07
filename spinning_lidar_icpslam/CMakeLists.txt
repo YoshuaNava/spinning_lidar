@@ -57,46 +57,50 @@ LIST(APPEND LINK_LIBS
 )
 
 
-## Build library from icpslam source files
-LIST(APPEND SOURCEFILES
+## Build library from utils source files
+LIST(APPEND UTIL_SOURCEFILES
     src/utils/geometric_utils.cpp
     src/utils/messaging_utils.cpp
+)
+add_library(ROS_UTILS ${UTIL_SOURCEFILES})
+target_link_libraries(ROS_UTILS
+  ${LINK_LIBS}
+)
+
+## Build library from icpslam source files
+LIST(APPEND ICPSLAM_SOURCEFILES
     src/icpslam/icp_odometer.cpp
     src/icpslam/pose_optimizer.cpp
     src/icpslam/octree_mapper.cpp
 )
-add_library(${PROJECT_NAME} ${SOURCEFILES})
+add_library(${PROJECT_NAME} ${ICPSLAM_SOURCEFILES})
 target_link_libraries(${PROJECT_NAME}
   ${LINK_LIBS}
 )
 
+
 ## Utils for handling the spinning lidar point clouds
-add_executable(lidar_scan_filtering src/utils/lidar_scan_filtering.cpp)
+add_executable(lidar_scan_filtering src/laser_processing/lidar_scan_filtering.cpp)
 target_link_libraries(lidar_scan_filtering ${catkin_LIBRARIES})
 
-add_executable(interrupt_laser_assembler src/utils/interrupt_laser_assembler.cpp)
+add_executable(interrupt_laser_assembler src/laser_processing/interrupt_laser_assembler.cpp)
 target_link_libraries(interrupt_laser_assembler ${catkin_LIBRARIES})
+
+add_executable(gazebo_ref_frame_pub src/utils/gazebo_ref_frame_publisher.cpp)
+target_link_libraries(gazebo_ref_frame_pub ${catkin_LIBRARIES} ROS_UTILS)
 
 
 
 ## ICP SLAM
 add_executable(icpslam src/icpslam/icpslam.cpp)
-target_link_libraries(icpslam ${catkin_LIBRARIES} ${PROJECT_NAME})
+target_link_libraries(icpslam ${catkin_LIBRARIES} ${PROJECT_NAME} ROS_UTILS)
 
 
-if(BUILD_TESTS)
-    add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp)
-    target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
+if(BUILD_TESTS) 
+    add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp) 
+    target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES}) 
 
-    add_executable(test_assemblers_laserpipeline test/laser_pipeline/test_assemblers_laserpipeline.cpp)
-    target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES})
+    add_executable(test_assemblers_laserpipeline test/laser_pipeline/test_assemblers_laserpipeline.cpp) 
+    target_link_libraries(test_assemblers_laserpipeline ${catkin_LIBRARIES}) 
 
-    add_executable(test_pcl_ros test/pcl/test_pcl_ros.cpp)
-    target_link_libraries(test_pcl_ros ${catkin_LIBRARIES})
-
-    add_executable(test_pcl_icp test/pcl/test_pcl_icp.cpp)
-    target_link_libraries(test_pcl_icp ${catkin_LIBRARIES})
-
-    # add_executable(test_pcl_registration test/pcl/test_pcl_registration.cpp)
-    # target_link_libraries(test_pcl_registration ${catkin_LIBRARIES})
 endif()

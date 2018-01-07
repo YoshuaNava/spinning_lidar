@@ -95,6 +95,7 @@ void ICPOdometer::registerSubscribers()
 
 void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
 {
+	ROS_INFO("Map transform callback!");
 	tf::Transform tf_map_in_odom;
 	tf_map_in_odom.setOrigin( tf::Vector3(map_in_robot.pos(0), map_in_robot.pos(1), map_in_robot.pos(2)) );
     tf_map_in_odom.setRotation( tf::Quaternion(map_in_robot.rot.x(), map_in_robot.rot.y(), map_in_robot.rot.z(), map_in_robot.rot.w()) );
@@ -138,13 +139,17 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
 	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp);
 
-	// if(robot_odom_poses_.size() == 0)
-		// publishInitialMapTransform(pose_in_odom);
+	if(robot_odom_poses_.size() == 0)
+		publishInitialMapTransform(pose_in_odom);
 
-	if(!tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time().now()))
-		return;
 
-	Pose6DOF pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+	Pose6DOF pose_in_map;
+	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
+		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+	else
+		pose_in_map = pose_in_odom;
+
+	
 	robot_odom_poses_.push_back(pose_in_map);
 
 	int num_poses = robot_odom_path_.poses.size();
@@ -158,6 +163,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	}
 	else
 	{
+		ROS_INFO("OoooooooooooHHHH");
 		icp_odom_poses_.push_back(pose_in_map);
 		robot_odom_inited_ = true;
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);

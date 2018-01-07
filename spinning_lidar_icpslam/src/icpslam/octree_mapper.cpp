@@ -32,7 +32,7 @@ void OctreeMapper::loadParameters()
 	nh_.param("laser_frame", laser_frame_, std::string("laser"));
 
 	// Input robot odometry and point cloud topics
-	nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("spinning_lidar/increment_cloud"));
+	nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("icpslam/increment_cloud"));
 	nh_.param("map_cloud_topic", map_cloud_topic_, std::string("icpslam/map_cloud"));
 }
 

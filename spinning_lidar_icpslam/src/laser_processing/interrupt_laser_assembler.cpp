@@ -12,7 +12,7 @@ std::string ir_interrupt_topic, assembled_cloud_topic, assemble_service;
 ros::ServiceClient assemble_client;
 laser_assembler::AssembleScans2 assemble_srv;
 ros::Publisher point_cloud_pub;
-int num_points_thesh = 5000;
+size_t num_points_thesh = 5000;
 
 void irInterruptCallback(const std_msgs::Empty::ConstPtr& msg)
 {

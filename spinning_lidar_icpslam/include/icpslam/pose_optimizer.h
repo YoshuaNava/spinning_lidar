@@ -5,7 +5,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Vector3.h>
 #include <std_msgs/ColorRGBA.h>
-#include <gazebo_msgs/GetModelState.h>      // For using the Gazebo absolute pos reference when tuning the algorithm
 #include <visualization_msgs/Marker.h>
 #include <tf/transform_broadcaster.h>
 #include <pcl/point_cloud.h>
@@ -43,7 +42,8 @@ private:
     std::string namespace_, graph_edges_topic_, graph_vertices_topic_, graph_keyframes_topic_, increment_cloud_topic_;
     std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
     ros::Publisher graph_edges_pub_, graph_vertices_pub_, graph_keyframes_pub_, increment_cloud_pub_;
-    ros::ServiceClient gazebo_map_service_;
+    bool publish_map_transform_;
+    
 
     std_msgs::ColorRGBA vertex_color_;
     std_msgs::ColorRGBA odom_edge_color_;
