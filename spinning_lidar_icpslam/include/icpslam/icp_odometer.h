@@ -48,14 +48,14 @@ private:
 	ros::Subscriber robot_odometry_sub_, assembled_cloud_sub_;
 
 	// ICP odometry debug topics and publishers
-	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_;
-	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_;
+	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_, true_path_topic_;
+	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_, true_path_pub_;
 
 	// PCL clouds for odometry
 	pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_, curr_cloud_;
 
 	// ICP odometry containers
-	nav_msgs::Path robot_odom_path_, icp_odom_path_;
+	nav_msgs::Path robot_odom_path_, icp_odom_path_, true_path_;
 
 	// Translations and rotations estimated by ICP
 	bool new_transform_;

@@ -60,11 +60,11 @@ void PoseOptimizer::init()
 
     optimizer_ = new g2o::SparseOptimizer();
 
-    // g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-    //     g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
-
     g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-        g2o::make_unique<g2o::BlockSolver_6_3>(g2o::make_unique<g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>>()));
+        g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
+
+    // g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
+    //     g2o::make_unique<g2o::BlockSolver_6_3>(g2o::make_unique<g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>>()));
 
     optimizer_->setAlgorithm(solver);
     optimizer_->setVerbose(true);
@@ -127,11 +127,11 @@ void PoseOptimizer::setGraphMarkersProperties()
     keyframes_scale_.x = 0.15;
     keyframes_scale_.y = 0.15;
     keyframes_scale_.z = 0.15;
-    vertex_scale_.x = 0.05;
-    vertex_scale_.y = 0.05;
-    vertex_scale_.z = 0.05;
+    vertex_scale_.x = 0.1;
+    vertex_scale_.y = 0.1;
+    vertex_scale_.z = 0.1;
     closure_edge_scale_.x = 0.05;
-    odom_edge_scale_.x = 0.05;
+    odom_edge_scale_.x = 0.03;
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */
@@ -143,11 +143,13 @@ void PoseOptimizer::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DO
 
     g2o::VertexSE3* v = new g2o::VertexSE3();
     v->setId(*key);
-    g2o::SE3Quat se3_transform(pose.rot, pose.pos);
-    v->setEstimate( se3_transform );
+    g2o::SE3Quat se3_pose(pose.rot, pose.pos);
+    v->setEstimate( se3_pose );
+    // std::cout << "keyframe vertex \n" << se3_pose << std::endl;
 
     if(curr_vertex_key_ == 0)
     {
+        ROS_ERROR("FIXED VERTEX");
         v->setFixed(true);
     }
     
@@ -169,14 +171,9 @@ void PoseOptimizer::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DO
 
     g2o::VertexSE3* v = new g2o::VertexSE3();
     v->setId(*key);
-    g2o::SE3Quat se3_transform(pose.rot, pose.pos);
-    v->setEstimate( se3_transform );
-
-    if(curr_vertex_key_ == 0)
-    {
-        v->setFixed(true);
-    }
-    
+    g2o::SE3Quat se3_pose(pose.rot, pose.pos);
+    // std::cout << "odometry vertex \n" << se3_pose << std::endl;
+    v->setEstimate( se3_pose );
     optimizer_->addVertex( v );
 
     curr_vertex_key_++;
@@ -199,7 +196,10 @@ void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint verte
 	edge->vertices()[1] = vertex2;
 	edge->setMeasurement( se3_pose );
 
-    std::cout << "edge inverse covariance \n" << meas_info << std::endl;
+    // std::cout << "vertex 1 \n" << vertex1->estimate().matrix() << std::endl;
+    // std::cout << "vertex 2 \n" << vertex2->estimate().matrix() << std::endl;
+    // std::cout << "edge relative transform \n" << e_T << std::endl;
+    // std::cout << "information matrix \n" << meas_info << std::endl << std::endl;
 	edge->setInformation( meas_info );
 
     bool success = optimizer_->addEdge( edge );
@@ -218,26 +218,33 @@ void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint verte
 
 bool PoseOptimizer::optimizeGraph()
 {
-    optimizer_->save("icpslam_posegraph_before.g2o");
     optimizer_->initializeOptimization();
-    optimizer_->computeActiveErrors();
-    optimizer_->setVerbose(true);
-
-    ROS_ERROR("Optimization iterating");
-    int iters = optimizer_->optimize(pose_opt_iters);
-    
-    if (iters < pose_opt_iters)
+    bool valid_info_matrices = optimizer_->verifyInformationMatrices(true);
+    if(valid_info_matrices)
     {
-        ROS_ERROR("Pose graph optimization failed after %i iterations.", iters);
-        return false;
+        optimizer_->save("icpslam_posegraph_before.g2o");
+        optimizer_->computeActiveErrors();
+        optimizer_->setVerbose(true);
+
+        ROS_ERROR("Optimization iterating");
+        int iters = optimizer_->optimize(pose_opt_iters);
+
+        std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
+        
+        if (iters < pose_opt_iters)
+        {
+            ROS_ERROR("Pose graph optimization failed after %i iterations.", iters);
+            return false;
+        }
+
+        ROS_ERROR("Pose graph optimization finished!");
+
+        optimizer_->save("icpslam_posegraph_after.g2o");
+
+        return true;
     }
 
-    ROS_ERROR("Pose graph optimization finished!");
-    // std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
-    
-    optimizer_->save("icpslam_posegraph_after.g2o");
-
-    return true;
+    return false;
 }
 
 void PoseOptimizer::refinePoseGraph()
@@ -322,8 +329,8 @@ void PoseOptimizer::publishPoseGraphMarkers()
         uint vertex2_key = graph_edges_.at(i).second;
 
         geometry_msgs::Point point1, point2;
-        point1 = getROSPointFromPose6DOF(graph_poses_.at(vertex1_key));
-        point2 = getROSPointFromPose6DOF(graph_poses_.at(vertex2_key));
+        point1 = graph_poses_.at(vertex1_key).toROSPoint();
+        point2 = graph_poses_.at(vertex2_key).toROSPoint();
 
         edges_marker.points.push_back(point1);
         edges_marker.points.push_back(point2);
@@ -416,11 +423,7 @@ void PoseOptimizer::publishRefinedMap()
             PointCloud::Ptr cloud_ptr = graph_scans_.at(i);
             PointCloud::Ptr cloud_out_ptr(new PointCloud());
 
-            // std::cout << "Keyframe " << i << std::endl;
-            // std::cout << keyframe_pose.toStringWithQuaternions("### ");
-
             tf::Transform tf_keyframe_in_map = keyframe_pose.toTFTransform();
-
             try
             {
                 pcl_ros::transformPointCloud(*cloud_ptr, *cloud_out_ptr, tf_keyframe_in_map);

@@ -14,6 +14,7 @@
         <param name="icp_odom_topic" type="string" value="/icpslam/odom" />
         <param name="robot_odom_path_topic" type="string" value="/icpslam/robot_odom_path" />
         <param name="icp_odom_path_topic" type="string" value="/icpslam/icp_odom_path" />
+        <param name="true_path_topic" type="string" value="/icpslam/true_path" />
 
 		<param name="assembled_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" />
         <param name="prev_cloud_topic" type="string" value="/icpslam/prev_cloud" />

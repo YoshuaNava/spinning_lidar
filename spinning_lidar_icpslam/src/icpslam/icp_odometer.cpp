@@ -69,6 +69,8 @@ void ICPOdometer::loadParameters()
 
 		nh_.param("icp_odom_topic", icp_odom_topic_, std::string("icpslam/odom"));
 		nh_.param("icp_odom_path_topic", icp_odom_path_topic_, std::string("icpslam/icp_odom_path"));
+
+		nh_.param("true_path_topic", true_path_topic_, std::string("icpslam/true_path"));
 	}
 }
 
@@ -84,6 +86,7 @@ void ICPOdometer::advertisePublishers()
 
 		icp_odom_pub_ = nh_.advertise<nav_msgs::Odometry>(icp_odom_topic_, 1);
 		icp_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path_topic_, 1);
+		true_path_pub_ = nh_.advertise<nav_msgs::Path>(true_path_topic_, 1);
 	}
 }
 
@@ -108,7 +111,7 @@ void ICPOdometer::publishDebugTransform(Pose6DOF frame_in_robot)
 	tf::Transform tf_frame_in_robot;
 	tf_frame_in_robot.setOrigin( tf::Vector3(frame_in_robot.pos(0), frame_in_robot.pos(1), frame_in_robot.pos(2)) );
     tf_frame_in_robot.setRotation( tf::Quaternion(frame_in_robot.rot.x(), frame_in_robot.rot.y(), frame_in_robot.rot.z(), frame_in_robot.rot.w()) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot, ros::Time::now(), odom_frame_, "debug_frame"));
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot.inverse(), ros::Time::now(), odom_frame_, "debug_frame"));
 }
 
 bool ICPOdometer::isOdomReady()
@@ -144,7 +147,7 @@ void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pos
 	*odom_pose = robot_odom_poses_.back();
 	*new_transform = new_transform_;
 
-	new_transform_ = false;
+	this->new_transform_ = false;
 }
 
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
@@ -155,45 +158,45 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(robot_odom_poses_.size() == 0)
 	{
-		publishInitialMapTransform(pose_in_odom);
+		// publishInitialMapTransform(pose_in_odom);
 		rodom_first_pose = pose_in_odom;
 	}
-	else
-	{
-		Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_odom, rodom_first_pose);
-		publishDebugTransform(origin_diff);
-	}
 
-
-	Pose6DOF pose_in_map;
-	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
-		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
-	else
-		pose_in_map = pose_in_odom;
-
+	// rodom_first_pose.setIdentity();
+	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_odom, rodom_first_pose);
+	publishDebugTransform(origin_diff);
 	
-	robot_odom_poses_.push_back(pose_in_map);
+	robot_odom_poses_.push_back(pose_in_odom);
 
 	int num_poses = robot_odom_path_.poses.size();
 	if(num_poses > 0)
 	{
 		Pose6DOF prev_pose(robot_odom_path_.poses[num_poses-1].pose);
-		if(Pose6DOF::distanceEuclidean(pose_in_map, prev_pose) < POSE_DIST_THRESH)
+		if(Pose6DOF::distanceEuclidean(pose_in_odom, prev_pose) < POSE_DIST_THRESH)
 		{
 			return;
 		}
 	}
 	else
 	{
-		icp_odom_poses_.push_back(pose_in_map);
+		icp_odom_poses_.push_back(pose_in_odom);
 		robot_odom_inited_ = true;
-		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
+		insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
 	}
 
-	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
+	Pose6DOF pose_in_map;
+	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
+	{
+		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
+		true_path_.header.stamp = ros::Time().now();
+		true_path_.header.frame_id = map_frame_;
+		true_path_pub_.publish(true_path_);
+	}
 
+	insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
 	robot_odom_path_.header.stamp = ros::Time().now();
-	robot_odom_path_.header.frame_id = map_frame_;
+	robot_odom_path_.header.frame_id = odom_frame_;
 	robot_odom_path_pub_.publish(robot_odom_path_);
 
 	if(verbosity_level_ >= 2)

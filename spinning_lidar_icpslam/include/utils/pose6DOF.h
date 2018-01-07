@@ -300,6 +300,16 @@ public:
 		return pose;
 	}
 
+	geometry_msgs::Point toROSPoint()
+	{
+		geometry_msgs::Point p;
+		p.x = pos(0);
+		p.y = pos(1);
+		p.z = pos(2);
+
+		return p;
+	}
+
 	geometry_msgs::Pose toROSPose()
 	{
 		geometry_msgs::Pose pose;
