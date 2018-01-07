@@ -1,6 +1,6 @@
 
 #include "icpslam/icp_odometer.h"
-#include "icpslam/pose_optimizer.h"
+#include "icpslam/pose_optimizer_g2o.h"
 #include "icpslam/octree_mapper.h"
 
 
@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 
 	ROS_INFO("#####       ICPSLAM         #####");	
 	ICPOdometer icp_odometer(nh);
-	PoseOptimizer pose_optimizer(nh);
+	PoseOptimizerG2O pose_optimizer(nh);
 	OctreeMapper octree_mapper(nh);
 
 	bool run_pose_optimization = false;
@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 					run_pose_optimization = true;
 			}
 
-			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) /*&& (num_keyframes > 0)*/)
 			{
 				prev_robot_odom_pose = robot_odom_pose;
 				num_vertices++;
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 						covariance(i, i) = 100;
 				for (int i = 3; i < 6; ++i)
 						covariance(i, i) = 200;
-				pose_optimizer.addNewEdge(covariance, prev_vertex_key, curr_vertex_key, &edge_key);
+				pose_optimizer.addNewEdge(covariance, curr_vertex_key, prev_vertex_key, &edge_key);
 
 				if(!last_keyframe_linked)
 				{
@@ -93,17 +93,18 @@ int main(int argc, char** argv)
 						covariance(i, i) = 0.01;
 					for (int i = 3; i < 6; ++i)
 						covariance(i, i) = 0.02;
-					pose_optimizer.addNewEdge(covariance, last_keyframe_key, curr_vertex_key, &edge_key);
+					pose_optimizer.addNewEdge(covariance, curr_vertex_key, last_keyframe_key, &edge_key);
 					last_keyframe_linked = true;
 				}
 				
 				// ROS_INFO("	Edge inserted! ID %d", edge_key);
 				// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 
+				// if(num_vertices % keyframes_window == 0)
+				// 	run_pose_optimization = true;
+
 				prev_vertex_key = curr_vertex_key;
 			}
-	
-
 
 			if(run_pose_optimization)
 			{

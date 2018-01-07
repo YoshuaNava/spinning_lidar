@@ -70,7 +70,7 @@ target_link_libraries(ROS_UTILS
 ## Build library from icpslam source files
 LIST(APPEND ICPSLAM_SOURCEFILES
     src/icpslam/icp_odometer.cpp
-    src/icpslam/pose_optimizer.cpp
+    src/icpslam/pose_optimizer_g2o.cpp
     src/icpslam/octree_mapper.cpp
 )
 add_library(${PROJECT_NAME} ${ICPSLAM_SOURCEFILES})

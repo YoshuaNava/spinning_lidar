@@ -2,7 +2,7 @@
 #include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
-#include "icpslam/pose_optimizer.h"
+#include "icpslam/pose_optimizer_g2o.h"
 
 #include <random>
 #include <iostream>
@@ -45,13 +45,13 @@
 
 
 
-PoseOptimizer::PoseOptimizer(ros::NodeHandle nh) :
+PoseOptimizerG2O::PoseOptimizerG2O(ros::NodeHandle nh) :
     nh_(nh)
 {
     init();
 }
 
-void PoseOptimizer::init()
+void PoseOptimizerG2O::init()
 {
     curr_vertex_key_ = 0;
     curr_edge_key_ = 0;
@@ -76,7 +76,7 @@ void PoseOptimizer::init()
     advertisePublishers();
 }
 
-void PoseOptimizer::loadParameters()
+void PoseOptimizerG2O::loadParameters()
 {
     nh_.param("verbosity_level_", verbosity_level_, 1);
 
@@ -92,7 +92,7 @@ void PoseOptimizer::loadParameters()
     nh_.param("increment_cloud_topic", increment_cloud_topic_, std::string("icpslam/increment_cloud"));
 }
 
-void PoseOptimizer::advertisePublishers()
+void PoseOptimizerG2O::advertisePublishers()
 {
     graph_edges_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_edges_topic_, 1);
     graph_vertices_pub_ = nh_.advertise<visualization_msgs::Marker>(graph_vertices_topic_, 1);
@@ -100,12 +100,12 @@ void PoseOptimizer::advertisePublishers()
     increment_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(increment_cloud_topic_, 1);
 
     if(publish_map_transform_)
-        map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizer::mapTransformCallback, this);
+        map_transform_timer_ = nh_.createTimer(ros::Duration(0.01), &PoseOptimizerG2O::mapTransformCallback, this);
 
     setGraphMarkersProperties();
 }
 
-void PoseOptimizer::setGraphMarkersProperties()
+void PoseOptimizerG2O::setGraphMarkersProperties()
 {
     vertex_color_.r = 0;
     vertex_color_.g = 0;
@@ -135,7 +135,7 @@ void PoseOptimizer::setGraphMarkersProperties()
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */
-void PoseOptimizer::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key)
+void PoseOptimizerG2O::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key)
 {
     *key = curr_vertex_key_;
     graph_scans_.insert(std::pair<uint, PointCloud::Ptr>(*key, *new_cloud_ptr));
@@ -153,7 +153,7 @@ void PoseOptimizer::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DO
         v->setFixed(true);
     }
     
-    // v->setMarginalized(true);
+    v->setMarginalized(true);
     optimizer_->addVertex( v );
 
     curr_vertex_key_++;
@@ -161,7 +161,7 @@ void PoseOptimizer::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DO
 
 
 /* Inspired on mrsmap by Jurg Stuckler */
-void PoseOptimizer::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key)
+void PoseOptimizerG2O::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key)
 {
     *key = curr_vertex_key_;
     graph_poses_.insert(std::pair<uint, Pose6DOF>(*key, pose));
@@ -179,13 +179,13 @@ void PoseOptimizer::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DO
     curr_vertex_key_++;
 }
 
-void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key)
+void PoseOptimizerG2O::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key)
 {
     *key = curr_edge_key_;
 
 	g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex1_key ) );
 	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
-    Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
+    Eigen::Matrix4d e_T = (vertex1->estimate() * vertex2->estimate().inverse()).matrix();
     Pose6DOF e_pose(e_T);
     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
 
@@ -216,15 +216,17 @@ void PoseOptimizer::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint verte
     curr_edge_key_++;
 }
 
-bool PoseOptimizer::optimizeGraph()
+bool PoseOptimizerG2O::optimizeGraph()
 {
     optimizer_->initializeOptimization();
     bool valid_info_matrices = optimizer_->verifyInformationMatrices(true);
     if(valid_info_matrices)
     {
         optimizer_->save("icpslam_posegraph_before.g2o");
+        optimizer_->computeInitialGuess();
         optimizer_->computeActiveErrors();
         optimizer_->setVerbose(true);
+        std::cout << "Initial chi2 = " << FIXED(optimizer_->chi2()) << std::endl;
 
         ROS_ERROR("Optimization iterating");
         int iters = optimizer_->optimize(pose_opt_iters);
@@ -247,13 +249,13 @@ bool PoseOptimizer::optimizeGraph()
     return false;
 }
 
-void PoseOptimizer::refinePoseGraph()
+void PoseOptimizerG2O::refinePoseGraph()
 {
     refineVertices();
     refineEdges();
 }
 
-void PoseOptimizer::refineVertices()
+void PoseOptimizerG2O::refineVertices()
 {
     ROS_INFO("Refining vertices");
     for(size_t v_key=0; v_key<optimizer_->vertices().size() ;v_key++)
@@ -269,7 +271,7 @@ void PoseOptimizer::refineVertices()
     }
 }
 
-void PoseOptimizer::refineEdges()
+void PoseOptimizerG2O::refineEdges()
 {
     ROS_INFO("Refining edges");
     uint edge_key = 0;
@@ -280,9 +282,8 @@ void PoseOptimizer::refineEdges()
         uint vertex2_key = edge->vertices()[1]->id();
         g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
 	    g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
-        Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
+        Eigen::Matrix4d e_T = (vertex1->estimate() * vertex2->estimate().inverse()).matrix();
         Pose6DOF e_pose(e_T);
-        e_pose.pos = e_pose.pos;
         g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
         edge->setMeasurement(se3_pose);
 
@@ -290,22 +291,22 @@ void PoseOptimizer::refineEdges()
     }
 }
 
-Pose6DOF PoseOptimizer::getStartPose()
+Pose6DOF PoseOptimizerG2O::getStartPose()
 {
     return graph_poses_.find(0)->second;
 }
 
-Pose6DOF PoseOptimizer::getLatestPose()
+Pose6DOF PoseOptimizerG2O::getLatestPose()
 {
     return latest_pose;
 }
 
-bool PoseOptimizer::checkLoopClosure()
+bool PoseOptimizerG2O::checkLoopClosure()
 {
     return false;
 }
 
-void PoseOptimizer::publishPoseGraphMarkers()
+void PoseOptimizerG2O::publishPoseGraphMarkers()
 {
     visualization_msgs::Marker edges_marker;
     edges_marker.header.frame_id = map_frame_;
@@ -390,7 +391,7 @@ void PoseOptimizer::publishPoseGraphMarkers()
     
 }
 
-void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
+void PoseOptimizerG2O::mapTransformCallback(const ros::TimerEvent&)
 {
     // ROS_INFO("Map transform callback");
     tf::Transform transform;
@@ -413,7 +414,7 @@ void PoseOptimizer::mapTransformCallback(const ros::TimerEvent&)
     }
 }
 
-void PoseOptimizer::publishRefinedMap()
+void PoseOptimizerG2O::publishRefinedMap()
 {
     for (size_t i = 0; i < curr_vertex_key_; ++i)
     {

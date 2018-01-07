@@ -19,7 +19,7 @@
 #include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 
-class PoseOptimizer
+class PoseOptimizerG2O
 {
 private:
     typedef ros::Time TimeStamp;
@@ -57,7 +57,7 @@ private:
 
 public:
 
-    PoseOptimizer(ros::NodeHandle nh);
+    PoseOptimizerG2O(ros::NodeHandle nh);
 
     void init();
 
