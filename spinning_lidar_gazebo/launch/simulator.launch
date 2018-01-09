@@ -38,6 +38,6 @@
 
 
 	<param name="use_gui" value="true" />
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_viz)/rviz/live_sensor_loam.rviz" />
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor_loam.rviz" />
 
 </launch>

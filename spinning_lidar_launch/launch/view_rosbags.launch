@@ -6,6 +6,6 @@
 	<param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
 
 	<param name="use_gui" value="true" />
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_viz)/rviz/live_sensor.rviz" />
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor.rviz" />
 
 </launch>

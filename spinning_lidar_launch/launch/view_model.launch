@@ -9,6 +9,6 @@
 	<node name="model_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" /> 
 
 	<param name="use_gui" value="true" />
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_viz)/rviz/model.rviz" />
+	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/model.rviz" />
 
 </launch>
