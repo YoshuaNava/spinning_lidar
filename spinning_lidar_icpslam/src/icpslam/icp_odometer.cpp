@@ -111,7 +111,7 @@ void ICPOdometer::publishDebugTransform(Pose6DOF frame_in_robot)
 	tf::Transform tf_frame_in_robot;
 	tf_frame_in_robot.setOrigin( tf::Vector3(frame_in_robot.pos(0), frame_in_robot.pos(1), frame_in_robot.pos(2)) );
     tf_frame_in_robot.setRotation( tf::Quaternion(frame_in_robot.rot.x(), frame_in_robot.rot.y(), frame_in_robot.rot.z(), frame_in_robot.rot.w()) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot.inverse(), ros::Time::now(), odom_frame_, "debug_frame"));
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot.inverse(), ros::Time::now(), odom_frame_, "debug_frame_2"));
 }
 
 bool ICPOdometer::isOdomReady()
@@ -185,14 +185,6 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	}
 
 	Pose6DOF pose_in_map;
-	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
-	{
-		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
-		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
-		true_path_.header.stamp = ros::Time().now();
-		true_path_.header.frame_id = map_frame_;
-		true_path_pub_.publish(true_path_);
-	}
 
 	insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
 	robot_odom_path_.header.stamp = ros::Time().now();
@@ -205,6 +197,16 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		std::cout << "In map, robot odometry says: " << pose_in_map.toStringWithQuaternions("   ");
 		std::cout << std::endl;
 	}
+
+	// if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
+	// {
+	// 	pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+	// 	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
+	// 	true_path_.header.stamp = ros::Time().now();
+	// 	true_path_.header.frame_id = map_frame_;
+	// 	true_path_pub_.publish(true_path_);
+	// }
+
 }
 
 void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)

@@ -61,10 +61,7 @@ void PoseOptimizerG2O::init()
     optimizer_ = new g2o::SparseOptimizer();
 
     g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-        g2o::make_unique<g2o::BlockSolverX>(g2o::make_unique<g2o::LinearSolverDense<g2o::BlockSolverX::PoseMatrixType>>()));
-
-    // g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-    //     g2o::make_unique<g2o::BlockSolver_6_3>(g2o::make_unique<g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>>()));
+        g2o::make_unique<g2o::BlockSolver_6_3>(g2o::make_unique<g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>>()));
 
     optimizer_->setAlgorithm(solver);
     optimizer_->setVerbose(true);
@@ -153,9 +150,9 @@ void PoseOptimizerG2O::addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose
         v->setFixed(true);
     }
     
-    v->setMarginalized(true);
+    // v->setMarginalized(true);
     optimizer_->addVertex( v );
-
+    
     curr_vertex_key_++;
 }
 
@@ -179,13 +176,13 @@ void PoseOptimizerG2O::addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose
     curr_vertex_key_++;
 }
 
-void PoseOptimizerG2O::addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key)
+void PoseOptimizerG2O::addNewEdge(Eigen::MatrixXd cov, uint vertex2_key, uint vertex1_key, uint *key)
 {
     *key = curr_edge_key_;
 
 	g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex1_key ) );
 	g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( vertex2_key ) );
-    Eigen::Matrix4d e_T = (vertex1->estimate() * vertex2->estimate().inverse()).matrix();
+    Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
     Pose6DOF e_pose(e_T);
     g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
 
@@ -222,16 +219,16 @@ bool PoseOptimizerG2O::optimizeGraph()
     bool valid_info_matrices = optimizer_->verifyInformationMatrices(true);
     if(valid_info_matrices)
     {
-        optimizer_->save("icpslam_posegraph_before.g2o");
+        optimizer_->save("/home/alfredoso/icpslam_posegraph_before.g2o");
+
         optimizer_->computeInitialGuess();
         optimizer_->computeActiveErrors();
         optimizer_->setVerbose(true);
         std::cout << "Initial chi2 = " << FIXED(optimizer_->chi2()) << std::endl;
-
         ROS_ERROR("Optimization iterating");
         int iters = optimizer_->optimize(pose_opt_iters);
 
-        std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
+        // std::cout << "Results: " << optimizer_->vertices().size() << " nodes, " << optimizer_->edges().size() << " edges, " << "chi2: " << optimizer_->chi2() << "\n";
         
         if (iters < pose_opt_iters)
         {
@@ -241,7 +238,7 @@ bool PoseOptimizerG2O::optimizeGraph()
 
         ROS_ERROR("Pose graph optimization finished!");
 
-        optimizer_->save("icpslam_posegraph_after.g2o");
+        optimizer_->save("/home/alfredoso/icpslam_posegraph_after.g2o");
 
         return true;
     }
@@ -282,7 +279,7 @@ void PoseOptimizerG2O::refineEdges()
         uint vertex2_key = edge->vertices()[1]->id();
         g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
 	    g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
-        Eigen::Matrix4d e_T = (vertex1->estimate() * vertex2->estimate().inverse()).matrix();
+        Eigen::Matrix4d e_T = (vertex1->estimate().inverse() * vertex2->estimate()).matrix();
         Pose6DOF e_pose(e_T);
         g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
         edge->setMeasurement(se3_pose);

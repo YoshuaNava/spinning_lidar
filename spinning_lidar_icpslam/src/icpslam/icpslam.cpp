@@ -5,7 +5,7 @@
 
 
 const double KFS_DIST_THRESH = 0.5;
-const double VERTEX_DIST_THRESH = 0.1;
+const double VERTEX_DIST_THRESH = 0.05;
 
 
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
 	Pose6DOF robot_odom_pose, prev_robot_odom_pose, icp_odom_pose, prev_keyframe_pose, icp_latest_transform;
 
-	long num_keyframes = 0, num_vertices = 0;
+	long num_keyframes = 0;
 	int iter = 0;
 	while(ros::ok())
     {
@@ -47,14 +47,13 @@ int main(int argc, char** argv)
 			{
 				pose_optimizer.addNewKeyframeVertex(&cloud, icp_latest_transform, icp_odom_pose, &curr_vertex_key);
 				num_keyframes++;
-				num_vertices++;
 				prev_keyframe_pose = icp_odom_pose;
 				prev_robot_odom_pose = robot_odom_pose;
 				last_keyframe_key = curr_vertex_key;
 				last_keyframe_linked = false;
 
 				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
-				// ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key);
+				ROS_ERROR("	Keyframe inserted! ID %d", curr_vertex_key);
 				
 				if((curr_vertex_key > prev_vertex_key) && (prev_vertex_key > 0))
 				{
@@ -62,46 +61,48 @@ int main(int argc, char** argv)
 					for (int i = 0; i < 3; ++i)
 						covariance(i, i) = 0.001;
 					for (int i = 3; i < 6; ++i)
-						covariance(i, i) = 0.002;
-					pose_optimizer.addNewEdge(covariance, prev_vertex_key, curr_vertex_key, &edge_key);
-					// ROS_INFO("	Edge inserted! ID %d", edge_key);
-					// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
+						covariance(i, i) = 0.01;
+					pose_optimizer.addNewEdge(covariance, curr_vertex_key, prev_vertex_key, &edge_key);
+					last_keyframe_linked = true;
+					ROS_INFO("	KF-odom Edge inserted! ID %d", edge_key);
+					ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
 				}
 
 				if(num_keyframes % keyframes_window == 0)
 					run_pose_optimization = true;
+
 			}
 
-			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) /*&& (num_keyframes > 0)*/)
+			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
 			{
 				prev_robot_odom_pose = robot_odom_pose;
-				num_vertices++;
 				pose_optimizer.addNewOdometryVertex(&cloud, robot_odom_pose, &curr_vertex_key);
 				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key);
 
-
-				Eigen::Matrix<double,6,6> covariance = Eigen::MatrixXd::Zero(6,6);
-				for (int i = 0; i < 3; ++i)
-						covariance(i, i) = 100;
-				for (int i = 3; i < 6; ++i)
-						covariance(i, i) = 200;
-				pose_optimizer.addNewEdge(covariance, curr_vertex_key, prev_vertex_key, &edge_key);
+				if((curr_vertex_key > prev_vertex_key) && (prev_vertex_key > 0))
+				{
+					Eigen::Matrix<double,6,6> covariance = Eigen::MatrixXd::Zero(6,6);
+					for (int i = 0; i < 3; ++i)
+						covariance(i, i) = 1;
+					for (int i = 3; i < 6; ++i)
+						covariance(i, i) = 1;
+					pose_optimizer.addNewEdge(covariance, curr_vertex_key, prev_vertex_key, &edge_key);
+					ROS_INFO("	Odom-odom Edge inserted! ID %d", edge_key);
+					ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
+				}
 
 				if(!last_keyframe_linked)
 				{
+					Eigen::Matrix<double,6,6> covariance = Eigen::MatrixXd::Zero(6,6);
 					for (int i = 0; i < 3; ++i)
-						covariance(i, i) = 0.01;
+						covariance(i, i) = 0.00001;
 					for (int i = 3; i < 6; ++i)
-						covariance(i, i) = 0.02;
+						covariance(i, i) = 0.0001;
 					pose_optimizer.addNewEdge(covariance, curr_vertex_key, last_keyframe_key, &edge_key);
 					last_keyframe_linked = true;
+					ROS_INFO("	Odom-KF Edge inserted! ID %d", edge_key);
+					ROS_INFO("		Between vertices	%d	 and   %d   ", last_keyframe_key, curr_vertex_key);
 				}
-				
-				// ROS_INFO("	Edge inserted! ID %d", edge_key);
-				// ROS_INFO("		Between vertices	%d	 and   %d   ", prev_vertex_key, curr_vertex_key);
-
-				// if(num_vertices % keyframes_window == 0)
-				// 	run_pose_optimization = true;
 
 				prev_vertex_key = curr_vertex_key;
 			}

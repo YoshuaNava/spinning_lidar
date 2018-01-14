@@ -71,7 +71,7 @@ public:
 
     void addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key);
 
-    void addNewEdge(Eigen::MatrixXd cov, uint vertex1_key, uint vertex2_key, uint *key);
+    void addNewEdge(Eigen::MatrixXd cov, uint vertex2_key, uint vertex1_key, uint *key);
 
     bool optimizeGraph();
 
