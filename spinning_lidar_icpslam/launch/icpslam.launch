@@ -30,11 +30,11 @@
     </node>
 
 
-    <node name="gazebo_ref_pub_node" pkg="spinning_lidar_icpslam" type="gazebo_ref_frame_pub" output="screen">
+<!--     <node name="gazebo_ref_pub_node" pkg="spinning_lidar_icpslam" type="gazebo_ref_frame_pub" output="screen">
         <param name="parent_frame" type="string" value="map" />
         <param name="child_frame" type="string" value="odom" />
         <param name="robot_frame" type="string" value="base_link" />
 		<param name="robot_name" type="string" value="ridgeback_yumi" />
-    </node>
+    </node> -->
 
 </launch>
