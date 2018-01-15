@@ -1,26 +1,31 @@
 
-#ifndef POSE_OPTIMIZER_G2O_H
-#define POSE_OPTIMIZER_G2O_H
+#ifndef POSE_OPTIMIZER_GTSAM_H
+#define POSE_OPTIMIZER_GTSAM_H
 
 #include "icpslam/pose_optimizer.h"
 
-#include "g2o/core/sparse_optimizer.h"
-#include "g2o/types/icp/types_icp.h"
-#include "g2o/types/slam3d/types_slam3d.h"
+#include <gtsam/base/Vector.h>
+#include <gtsam/geometry/Pose3.h>
+#include <gtsam/geometry/Rot3.h>
+#include <gtsam/linear/NoiseModel.h>
+#include <gtsam/nonlinear/ISAM2.h>
+#include <gtsam/nonlinear/NonlinearFactorGraph.h>
+#include <gtsam/nonlinear/Values.h>
+#include <gtsam/slam/PriorFactor.h>
+#include <gtsam/slam/BetweenFactor.h>
 
 #include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 
-class PoseOptimizerG2O : public PoseOptimizer
+class PoseOptimizerGTSAM : public PoseOptimizer
 {
 protected:
 
-    g2o::SparseOptimizer* optimizer_;
-
+    // g2o::SparseOptimizer* optimizer_;
 
 public:
 
-    PoseOptimizerG2O(ros::NodeHandle nh);
+    PoseOptimizerGTSAM(ros::NodeHandle nh);
 
     void init();
 

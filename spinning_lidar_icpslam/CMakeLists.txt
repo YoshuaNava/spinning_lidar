@@ -9,6 +9,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules/"
 
 set(BUILD_TESTS FALSE)
 
+find_package(GTSAM REQUIRED)
 find_package(G2O REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
@@ -36,12 +37,14 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
+    ${GTSAM_INCLUDE_DIR}
     ${G2O_INCLUDE_DIR} 
     /usr/include/suitesparse
 )
 
 LIST(APPEND LINK_LIBS ${catkin_LIBRARIES})
 LIST(APPEND LINK_LIBS
+    gtsam
     ${G2O_CORE_LIBRARY} 
     ${G2O_STUFF_LIBRARY} 
     ${G2O_SOLVER_CHOLMOD} 
@@ -51,7 +54,8 @@ LIST(APPEND LINK_LIBS
     ${G2O_TYPES_ICP}
     ${G2O_TYPES_SLAM3D}
     ${G2O_TYPES_SBA}
-    cholmod cxsparse
+    cholmod
+    cxsparse
 )
 
 
@@ -69,6 +73,7 @@ target_link_libraries(ROS_UTILS
 LIST(APPEND ICPSLAM_SOURCEFILES
     src/icpslam/icp_odometer.cpp
     src/icpslam/pose_optimizer_g2o.cpp
+    src/icpslam/pose_optimizer_gtsam.cpp
     src/icpslam/octree_mapper.cpp
 )
 add_library(${PROJECT_NAME} ${ICPSLAM_SOURCEFILES})

@@ -14,14 +14,6 @@
 #include <pcl/filters/voxel_grid.h>
 
 
-float inf = std::numeric_limits<float>::infinity();
-double min_dist_to_sensor;
-bool apply_voxel_filter;
-
-std::string laser_scan_topic, filtered_scan_topic, filtered_cloud_topic, laser_link;
-ros::Publisher filtered_scan_pub;
-
-
 class DynamicLaserToPointCloud
 {
 public:
@@ -53,6 +45,7 @@ private:
 	laser_geometry::LaserProjection laser_projector_;
 	double tf_filter_tol_ = 0.01;
 	double min_dist_to_sensor_;
+	float inf = std::numeric_limits<float>::infinity();
 	
 	void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan)
 	{
@@ -110,6 +103,12 @@ int main(int argc, char** argv)
 {
 	ros::init(argc, argv, "lidar_scan_filtering");
 	ros::NodeHandle nh;
+
+
+	double min_dist_to_sensor;
+	bool apply_voxel_filter;
+	std::string laser_scan_topic, filtered_scan_topic, filtered_cloud_topic, laser_link;
+	ros::Publisher filtered_scan_pub;
 
 	nh.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
 	nh.param("laser_link", laser_link, std::string("laser"));
