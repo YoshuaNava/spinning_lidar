@@ -13,8 +13,12 @@
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 
+
 class Pose6DOF
 {
+private:
+	const double EQUALITY_THRESH = 1e-10;
+
 public:
 	ros::Time time_stamp;
 	Eigen::Vector3d pos;
@@ -64,12 +68,6 @@ public:
 		time_stamp = stamp;
 		this->fromROSPoseWithCovariance(pose_msg);
 	}
-
-	// Pose6DOF(tf::Pose &pose)
-	// {
-	// 	this->fromTFPose(pose);
-	// 	cov = Eigen::MatrixXd::Zero(6,6);
-	// }
 	
 	Pose6DOF(tf::Transform &transform, ros::Time stamp = ros::Time(0))
 	{
@@ -85,6 +83,22 @@ public:
 		time_stamp = stamp;
 		this->fromROSTransform(transform);
 		cov = Eigen::MatrixXd::Zero(6,6);
+	}
+
+	Pose6DOF& operator +(Pose6DOF &p2)
+	{
+		Pose6DOF p3 = compose(*this, p2);
+		pos = p3.pos;
+		rot = p3.rot;
+		return *this;
+	}
+
+	Pose6DOF& operator -(Pose6DOF &p2)
+	{
+		Pose6DOF p3 = subtract(*this, p2);
+		pos = p3.pos;
+		rot = p3.rot;
+		return *this;
 	}
 
 	Pose6DOF& operator =(Pose6DOF pose)
@@ -107,6 +121,13 @@ public:
 	{
 		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
 	}
+
+	friend std::ostream& operator <<(std::ostream& os, const Pose6DOF& pose)
+	{
+		os << pose.toStringQuat();
+		return os;
+	}
+
 
 	Pose6DOF setIdentity()
 	{
@@ -134,6 +155,11 @@ public:
 		return *this;
 	}
 
+	Pose6DOF inverse()
+	{
+		return inverse(*this);
+	}
+
 	double distanceEuclidean(Pose6DOF p2)
 	{
 		return distanceEuclidean(*this, p2);
@@ -156,10 +182,18 @@ public:
 	static Pose6DOF subtract(Pose6DOF &p1, Pose6DOF &p2)
 	{
 		Pose6DOF p3;
-		p3.pos = p1.pos - p2.pos;
+		p3.pos = p1.rot.inverse() * (p2.pos - p1.pos);
 		p3.rot = p2.rot.inverse() * p1.rot;
 		p3.rot.normalize();
 		return p3;
+	}
+
+	static Pose6DOF inverse(Pose6DOF &pose)
+	{
+		Pose6DOF inv;
+		inv.pos = (pose.rot.inverse() *  pose.pos) * -1.0;
+		inv.rot = pose.rot.inverse();
+		return inv;
 	}
 
 	static Pose6DOF getIdentity()
@@ -173,7 +207,7 @@ public:
 		return pose;
 	}
 
-	std::string toStringWithQuaternions(std::string indent = "")
+	std::string toStringQuat(std::string indent = "") const
 	{
 		std::string output;
 		output += indent + "Time stamp = " + std::to_string(time_stamp.toSec()) + "\n";
@@ -183,7 +217,7 @@ public:
 		return output;
 	}
 
-	std::string toStringWithEulerAngles(std::string indent = "")
+	std::string toStringRPY(std::string indent = "") const
 	{
 		std::string output;
 		output += indent + "Time stamp = " + std::to_string(time_stamp.toSec()) + "\n";
@@ -341,10 +375,8 @@ public:
 		}
 		return pose_cov;
 	}
-
-private:
-	const double EQUALITY_THRESH = 1e-10;
 };
+
 
 
 

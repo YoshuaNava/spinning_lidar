@@ -164,6 +164,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	// rodom_first_pose.setIdentity();
 	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_odom, rodom_first_pose);
+
 	publishDebugTransform(origin_diff);
 	
 	robot_odom_poses_.push_back(pose_in_odom);
@@ -193,8 +194,8 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(verbosity_level_ >= 2)
 	{
-		std::cout << "Robot odometry says: " << pose_in_odom.toStringWithQuaternions("   ");
-		std::cout << "In map, robot odometry says: " << pose_in_map.toStringWithQuaternions("   ");
+		std::cout << "Robot odometry says: " << pose_in_odom.toStringQuat("   ");
+		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
 		std::cout << std::endl;
 	}
 

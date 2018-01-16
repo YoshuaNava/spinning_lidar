@@ -21,13 +21,16 @@ class PoseOptimizerGTSAM : public PoseOptimizer
 {
 protected:
 
-    // g2o::SparseOptimizer* optimizer_;
+    std::unique_ptr<gtsam::ISAM2> isam_;
+    gtsam::Values values_;
 
 public:
 
     PoseOptimizerGTSAM(ros::NodeHandle nh);
 
     void init();
+
+    void setInitialPose(Pose6DOF &initial_pose);
 
     void addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key);
 

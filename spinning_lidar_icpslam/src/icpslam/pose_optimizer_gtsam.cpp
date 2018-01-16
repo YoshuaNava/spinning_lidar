@@ -29,13 +29,10 @@ void PoseOptimizerGTSAM::init()
     graph_scans_.clear();
     graph_poses_.clear();
 
-    // optimizer_ = new g2o::SparseOptimizer();
-
-    // g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(
-    //     g2o::make_unique<g2o::BlockSolver_6_3>(g2o::make_unique<g2o::LinearSolverCholmod<g2o::BlockSolver_6_3::PoseMatrixType>>()));
-
-    // optimizer_->setAlgorithm(solver);
-    // optimizer_->setVerbose(true);
+    gtsam::ISAM2Params parameters;
+    parameters.relinearizeSkip = false;
+    parameters.relinearizeThreshold = false;
+    isam_.reset(new gtsam::ISAM2(parameters));
 
     namespace_ = "icpslam";
     pose_opt_iters = 30;
@@ -43,6 +40,27 @@ void PoseOptimizerGTSAM::init()
     loadParameters();
     advertisePublishers();
     ROS_INFO("Pose optimizer initialized. Backend = GTSAM");
+}
+
+void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
+{
+    gtsam::Vector3 translation(initial_pose.pos(0), initial_pose.pos(1), initial_pose.pos(2));
+    gtsam::Rot3 rotation(gtsam::Rot3(initial_pose.rot));
+    gtsam::Pose3 pose(rotation, translation);
+
+    gtsam::Vector6 noise;
+    noise << 0, 0, 0, 0, 0, 0;
+    gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
+
+    gtsam::NonlinearFactorGraph new_factor;
+    gtsam::Values new_value;
+    new_factor.add(gtsam::PriorFactor<gtsam::Pose3>(curr_vertex_key_, pose, covariance));
+    new_value.insert(curr_vertex_key_, pose);
+
+    isam_->update(new_factor, new_value);
+    values_ = isam_->calculateEstimate();
+
+    curr_vertex_key_++;
 }
 
 /* Inspired on mrsmap by Jurg Stuckler */

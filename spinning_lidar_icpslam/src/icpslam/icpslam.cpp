@@ -27,11 +27,11 @@ int main(int argc, char** argv)
 		 edge_key=0;
 	bool last_keyframe_linked = true,
 		 run_pose_optimization = false;
+	long num_keyframes = 0,
+		 iter = 0;
 
 	Pose6DOF robot_odom_pose, prev_robot_odom_pose, icp_odom_pose, prev_keyframe_pose, icp_latest_transform;
 
-	long num_keyframes = 0,
-		 iter = 0;
 	while(ros::ok())
     {
 		if(icp_odometer.isOdomReady())
