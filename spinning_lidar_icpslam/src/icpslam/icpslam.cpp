@@ -6,7 +6,7 @@
 
 
 const double KFS_DIST_THRESH = 0.3;
-const double VERTEX_DIST_THRESH = 0.1;
+const double VERTEX_DIST_THRESH = 0.2;
 
 
 
@@ -46,53 +46,51 @@ int main(int argc, char** argv)
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
 			icp_odometer.getLatestCloud(&cloud, &icp_transform, &icp_odom_pose, &robot_odom_pose, &new_transform);
-			Pose6DOF robot_odom_transform = Pose6DOF::subtract(robot_odom_pose, prev_robot_odom_pose);
+			Pose6DOF robot_odom_transform = Pose6DOF::subtract(prev_robot_odom_pose, robot_odom_pose);
 
 			if(num_vertices == 0)
 			{
+				ROS_INFO("	Initial pose inserted");
 				pose_optimizer->setInitialPose(robot_odom_pose);
 				num_vertices++;
+				prev_keyframe_pose = icp_odom_pose;
+				prev_robot_odom_pose = robot_odom_pose;
 				continue;
 			}
 
-			if(((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) || (num_keyframes == 0)) && (cloud->points.size()>0))
+			if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
 			{
+				ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
+				ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key+1);
 				pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, true);
 				num_keyframes++;
 				num_vertices++;
 				prev_keyframe_pose = icp_odom_pose;
 				prev_robot_odom_pose = robot_odom_pose;
 
-				ROS_INFO("##### Number of keyframes = %lu", num_keyframes);
-				ROS_ERROR("	Keyframe inserted! ID %d", curr_vertex_key);
-
 				if(num_keyframes % keyframes_window == 0)
 					run_pose_optimization = true;
 
 			}
-
-			if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH))
+			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
 			{
+				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key+1);
 				pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
 				num_vertices++;
 				prev_robot_odom_pose = robot_odom_pose;
-				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key);
 			}
+
+			// pose_optimizer->refinePoseGraph();
 
 			if(run_pose_optimization)
 			{
-				bool success = pose_optimizer->optimizeGraph();
-
-				if(success)
-				{
-					// pose_optimizer->refinePoseGraph();
-					// pose_optimizer->publishRefinedMap();
-				}
-				run_pose_optimization = false;
-				ROS_INFO("***** Graph pose optimization ******");
+				// pose_optimizer->refinePoseGraph();
+				pose_optimizer->publishRefinedMap();
+				run_pose_optimization = false;	
 			}
 
 			pose_optimizer->publishPoseGraphMarkers();
+			
 
 			prev_vertex_key = curr_vertex_key;
 

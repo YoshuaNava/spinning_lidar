@@ -49,6 +49,15 @@ gtsam::Pose3 toGtsamPose3(Pose6DOF &pose)
   return gtsam::Pose3(rotation, translation);
 }
 
+Pose6DOF toPose6DOF(const gtsam::Pose3& pose3)
+{
+  Pose6DOF out;
+  out.pos(0) = pose3.translation().x();
+  out.pos(1) = pose3.translation().y();
+  out.pos(2) = pose3.translation().z();
+  out.rot = pose3.rotation().toQuaternion();
+  return out;
+}
 
 gtsam::noiseModel::Gaussian::shared_ptr toGtsamGaussian(const Eigen::MatrixXd &cov)
 {
@@ -67,7 +76,7 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
 
     gtsam::Pose3 pose3 = toGtsamPose3(initial_pose);
     gtsam::Vector6 noise;
-    noise << 0.1, 0.1, 0.1, 0.05, 0.05, 0.05;
+    noise << 0.001, 0.001, 0.001, 0.005, 0.005, 0.005;
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
 
     gtsam::NonlinearFactorGraph new_factor;
@@ -78,9 +87,7 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
     isam_->update(new_factor, new_value);
     graph_values_ = isam_->calculateEstimate();
 
-    ROS_INFO("  Initial pose ready");
-
-    graph_values_.print("Initial pose graph:\n");
+    std::cout << "Vertex " << curr_vertex_key_ << "\n" << initial_pose;
 
     graph_poses_.insert(std::pair<uint, Pose6DOF>(curr_vertex_key_, initial_pose));
     curr_vertex_key_++;
@@ -93,25 +100,25 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     gtsam::Pose3 pose3 = toGtsamPose3(pose);
     // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov);
 
-    gtsam::NonlinearFactorGraph new_factor;
-    gtsam::Values new_value;
-
     gtsam::Vector6 noise;
     if(is_keyframe)
         noise << 0.5, 0.5, 0.5, 1.0, 1.0, 1.0;
     else
-        noise << 5.0, 5.0, 5.0, 10.0, 10.0, 10.0;
-
+        noise << 1.0, 1.0, 1.0, 2.0, 2.0, 2.0;
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
 
+
+    gtsam::NonlinearFactorGraph new_factor;
+    gtsam::Values new_value;
     new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(curr_vertex_key_-1, curr_vertex_key_, delta, covariance));
     new_value.insert(curr_vertex_key_, pose3);
-
-    ROS_INFO("  ISAM2 update");
     isam_->update(new_factor, new_value);
     graph_values_ = isam_->calculateEstimate();
 
-    graph_values_.print("Current pose graph:\n");
+    std::cout << "Vertex " << curr_vertex_key_ << "\n Pose: \n" << pose;
+    std::cout << "Transform: \n" << transform;
+
+    // graph_values_.print("Current pose graph:\n");
 }
 
 
@@ -129,13 +136,15 @@ void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF t
 
     curr_vertex_key_++;
     curr_edge_key_++;
+
+    this->refinePoseGraph();
 }
 
 
 
 bool PoseOptimizerGTSAM::optimizeGraph()
 {
-    graph_values_.print("Optimized pose graph:\n");
+    // graph_values_.print("Optimized pose graph:\n");
     // graph_values_ = isam_->calculateEstimate();
 
     return true;
@@ -144,23 +153,24 @@ bool PoseOptimizerGTSAM::optimizeGraph()
 void PoseOptimizerGTSAM::refinePoseGraph()
 {
     refineVertices();
-    refineEdges();
 }
 
 void PoseOptimizerGTSAM::refineVertices()
 {
-    ROS_INFO("Refining vertices");
-    // for(size_t v_key=0; v_key<optimizer_->vertices().size() ;v_key++)
-    // {
-        // g2o::VertexSE3* v = dynamic_cast< g2o::VertexSE3* >( optimizer_->vertex( v_key ) );
-        // Eigen::Matrix4d v_T = v->estimate().matrix();
-        // Pose6DOF v_pose(v_T);
-        // v_pose.pos = v_pose.pos;
-        // graph_poses_.find(v_key)->second = v_pose;
+    ROS_ERROR("Refining vertices");
+    for (const auto& value : graph_values_)
+    {
+        const unsigned int key = value.key;
+        Pose6DOF v_pose = toPose6DOF(graph_values_.at<gtsam::Pose3>(key));
+        graph_poses_.find(key)->second.pos = v_pose.pos;
+        graph_poses_.find(key)->second.rot = v_pose.rot;
+        Pose6DOF new_pose = graph_poses_.find(key)->second;
+        std::cout << "Vertex " << key << "\n" << new_pose;
 
         // if(v_key == optimizer_->vertices().size()-1)
         //     latest_pose = v_pose;
-    // }
+    }
+    ROS_ERROR("Vertices refined");
 }
 
 void PoseOptimizerGTSAM::refineEdges()

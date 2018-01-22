@@ -156,50 +156,53 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
 	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp), 
 			 pose_in_map;
-	pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+
+	if(tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)))
+		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
+	else
+		return;
 
 	if(robot_odom_poses_.size() == 0)
 	{
-		// publishInitialMapTransform(pose_in_odom);
-		rodom_first_pose = pose_in_odom;
+		rodom_first_pose = pose_in_map;
 	}
 
 	// rodom_first_pose.setIdentity();
-	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_odom, rodom_first_pose);
+	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_map, rodom_first_pose);
 
 	publishDebugTransform(origin_diff);
 	
-	robot_odom_poses_.push_back(pose_in_odom);
+	robot_odom_poses_.push_back(pose_in_map);
 
 	int num_poses = robot_odom_path_.poses.size();
 	if(num_poses > 0)
 	{
 		Pose6DOF prev_pose(robot_odom_path_.poses[num_poses-1].pose);
-		if(Pose6DOF::distanceEuclidean(pose_in_odom, prev_pose) < POSE_DIST_THRESH)
+		if(Pose6DOF::distanceEuclidean(pose_in_map, prev_pose) < POSE_DIST_THRESH)
 		{
 			return;
 		}
 	}
 	else
 	{
-		icp_odom_poses_.push_back(pose_in_odom);
+		icp_odom_poses_.push_back(pose_in_map);
 		robot_odom_inited_ = true;
-		insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
+		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
 	}
 
-	insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
+	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
 	robot_odom_path_.header.stamp = ros::Time().now();
-	robot_odom_path_.header.frame_id = odom_frame_;
+	robot_odom_path_.header.frame_id = map_frame_;
 	robot_odom_path_pub_.publish(robot_odom_path_);
 
 	if(verbosity_level_ >= 2)
 	{
-		std::cout << "Robot odometry says: " << pose_in_odom.toStringQuat("   ");
+		std::cout << "Robot odometry says: " << pose_in_map.toStringQuat("   ");
 		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
 		std::cout << std::endl;
 	}
 
-	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
+	if( tf_listener_.canTransform(odom_frame_, map_frame_, ros::Time(0)) )
 	{
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
 		true_path_.header.stamp = ros::Time().now();
