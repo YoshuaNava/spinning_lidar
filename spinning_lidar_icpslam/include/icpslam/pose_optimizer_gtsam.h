@@ -22,7 +22,7 @@ class PoseOptimizerGTSAM : public PoseOptimizer
 protected:
 
     std::unique_ptr<gtsam::ISAM2> isam_;
-    gtsam::Values values_;
+    gtsam::Values graph_values_;
 
 public:
 
@@ -32,11 +32,9 @@ public:
 
     void setInitialPose(Pose6DOF &initial_pose);
 
-    void addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key);
+    void extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool is_keyframe);
 
-    void addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key);
-
-    void addNewEdge(Eigen::MatrixXd cov, uint vertex2_key, uint vertex1_key, uint *key);
+    void addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, uint *key, bool is_keyframe);
 
     bool optimizeGraph();
 

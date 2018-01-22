@@ -154,7 +154,9 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 {
 	// ROS_INFO("Robot odometry callback!");
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
-	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp);
+	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp), 
+			 pose_in_map;
+	pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
 
 	if(robot_odom_poses_.size() == 0)
 	{
@@ -185,8 +187,6 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
 	}
 
-	Pose6DOF pose_in_map;
-
 	insertPoseInPath(pose_in_odom.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
 	robot_odom_path_.header.stamp = ros::Time().now();
 	robot_odom_path_.header.frame_id = odom_frame_;
@@ -199,14 +199,13 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		std::cout << std::endl;
 	}
 
-	// if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
-	// {
-	// 	pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
-	// 	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
-	// 	true_path_.header.stamp = ros::Time().now();
-	// 	true_path_.header.frame_id = map_frame_;
-	// 	true_path_pub_.publish(true_path_);
-	// }
+	if( tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)) )
+	{
+		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
+		true_path_.header.stamp = ros::Time().now();
+		true_path_.header.frame_id = map_frame_;
+		true_path_pub_.publish(true_path_);
+	}
 
 }
 
