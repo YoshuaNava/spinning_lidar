@@ -104,10 +104,10 @@ std::string getStringFromVector3d(Eigen::Vector3d vector)
 std::string getStringFromQuaternion(Eigen::Quaterniond q)
 {
 	std::string output = "(";
+	output += std::to_string(q.w()) + ", ";
 	output += std::to_string(q.x()) + ", ";
 	output += std::to_string(q.y()) + ", ";
-	output += std::to_string(q.z()) + ", ";
-	output += std::to_string(q.w()) + ") with Norm = ";
+	output += std::to_string(q.z()) + ") with Norm = ";
 	output += std::to_string(q.norm());
 	return output;
 }

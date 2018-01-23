@@ -214,7 +214,7 @@ public:
 		std::string output;
 		output += indent + "Time stamp = " + std::to_string(time_stamp.toSec()) + "\n";
 		output += indent + "Position = (" + std::to_string(pos(0)) + ", " + std::to_string(pos(1)) + ", " + std::to_string(pos(2)) + ") with Norm = " + std::to_string(pos.norm()) + "\n";
-		output += indent + "Rotation (q) = (" + std::to_string(rot.x()) + ", " + std::to_string(rot.y()) + ", " + std::to_string(rot.z()) + ", " + std::to_string(rot.w()) + ") with Norm = " + std::to_string(rot.norm()) + "\n";
+		output += indent + "Rotation (q) = (" + std::to_string(rot.w()) + ", " + std::to_string(rot.x()) + ", " + std::to_string(rot.y()) + ", " + std::to_string(rot.z()) + ") with Norm = " + std::to_string(rot.norm()) + "\n";
 		
 		return output;
 	}

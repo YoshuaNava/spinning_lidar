@@ -14,6 +14,7 @@
 #include "utils/pose6DOF.h"
 #include "utils/geometric_utils.h"
 #include "utils/messaging_utils.h"
+#include "utils/matplotlibcpp.h"
 
 
 PoseOptimizerGTSAM::PoseOptimizerGTSAM(ros::NodeHandle nh) :
@@ -101,12 +102,8 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov);
 
     gtsam::Vector6 noise;
-    if(is_keyframe)
-        noise << 0.5, 0.5, 0.5, 1.0, 1.0, 1.0;
-    else
-        noise << 1.0, 1.0, 1.0, 2.0, 2.0, 2.0;
+    noise << 1.0, 1.0, 1.0, 2.0, 2.0, 2.0;
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
-
 
     gtsam::NonlinearFactorGraph new_factor;
     gtsam::Values new_value;

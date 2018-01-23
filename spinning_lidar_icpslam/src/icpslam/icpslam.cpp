@@ -4,10 +4,8 @@
 #include "icpslam/pose_optimizer_g2o.h"
 #include "icpslam/pose_optimizer_gtsam.h"
 
-
 const double KFS_DIST_THRESH = 0.3;
-const double VERTEX_DIST_THRESH = 0.2;
-
+const double VERTEX_DIST_THRESH = 0.1;
 
 
 int main(int argc, char** argv)
@@ -50,6 +48,7 @@ int main(int argc, char** argv)
 
 			if(num_vertices == 0)
 			{
+				ROS_INFO("Iteration %d", iter);
 				ROS_INFO("	Initial pose inserted");
 				pose_optimizer->setInitialPose(robot_odom_pose);
 				num_vertices++;
@@ -58,34 +57,46 @@ int main(int argc, char** argv)
 				continue;
 			}
 
-			if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
+
+			if (new_transform)
 			{
-				ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
-				ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key+1);
-				pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, true);
-				num_keyframes++;
+				bool is_keyframe = false;
+				if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
+				{
+					is_keyframe = true;
+					ROS_INFO("Iteration %d", iter);
+					ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
+					ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key+1);
+					num_keyframes++;
+					prev_keyframe_pose = icp_odom_pose;
+					// std::cout << "Previous robot odom:\n" << prev_robot_odom_pose;
+
+					if(num_keyframes % keyframes_window == 0)
+						run_pose_optimization = true;
+				}
+				else 
+				{
+					ROS_INFO("Iteration %d", iter);
+					ROS_INFO("	ICP vertex inserted! ID %d", curr_vertex_key+1);
+				}
+				pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, is_keyframe);
 				num_vertices++;
-				prev_keyframe_pose = icp_odom_pose;
 				prev_robot_odom_pose = robot_odom_pose;
-
-				if(num_keyframes % keyframes_window == 0)
-					run_pose_optimization = true;
-
 			}
 			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
 			{
+				ROS_INFO("Iteration %d", iter);
 				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key+1);
 				pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
 				num_vertices++;
 				prev_robot_odom_pose = robot_odom_pose;
 			}
 
-			// pose_optimizer->refinePoseGraph();
 
 			if(run_pose_optimization)
 			{
-				// pose_optimizer->refinePoseGraph();
-				pose_optimizer->publishRefinedMap();
+				pose_optimizer->refinePoseGraph();
+				// pose_optimizer->publishRefinedMap();
 				run_pose_optimization = false;	
 			}
 

@@ -164,12 +164,11 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(robot_odom_poses_.size() == 0)
 	{
+		// rodom_first_pose.setIdentity();
 		rodom_first_pose = pose_in_map;
 	}
-
-	// rodom_first_pose.setIdentity();
+	
 	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_map, rodom_first_pose);
-
 	publishDebugTransform(origin_diff);
 	
 	robot_odom_poses_.push_back(pose_in_map);
@@ -194,14 +193,6 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	robot_odom_path_.header.stamp = ros::Time().now();
 	robot_odom_path_.header.frame_id = map_frame_;
 	robot_odom_path_pub_.publish(robot_odom_path_);
-
-	if(verbosity_level_ >= 2)
-	{
-		std::cout << "Robot odometry says: " << pose_in_map.toStringQuat("   ");
-		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
-		std::cout << std::endl;
-	}
-
 	if( tf_listener_.canTransform(odom_frame_, map_frame_, ros::Time(0)) )
 	{
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
@@ -210,6 +201,12 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		true_path_pub_.publish(true_path_);
 	}
 
+	if(verbosity_level_ >= 2)
+	{
+		std::cout << "Robot odometry says: " << pose_in_map.toStringQuat("   ");
+		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
+		std::cout << std::endl;
+	}
 }
 
 void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
@@ -225,9 +222,7 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	new_pose.time_stamp = ros::Time().now();
 
 	icp_odom_poses_.push_back(new_pose);
-
 	publishOdometry(new_pose.pos, new_pose.rot, map_frame_, odom_frame_, ros::Time().now(), &icp_odom_pub_);
-
 	insertPoseInPath(new_pose.toROSPose(), map_frame_, ros::Time().now(), icp_odom_path_);
 	icp_odom_path_.header.stamp = ros::Time().now();
 	icp_odom_path_.header.frame_id = map_frame_;
@@ -235,8 +230,10 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 	if(verbosity_level_ >= 2)
 	{
+		std::cout << std::endl;
 		std::cout << "Initial position = " << getStringFromVector3d(icp_odom_poses_[0].pos) << std::endl;
 		std::cout << "Initial rotation = " << getStringFromQuaternion(icp_odom_poses_[0].rot) << std::endl;
+		std::cout << "Prev odom pose = \n" << prev_pose;
 		std::cout << "Cloud translation = " << getStringFromVector3d(transform_in_odom.pos) << std::endl;
 		std::cout << "Cloud rotation = " << getStringFromQuaternion(transform_in_odom.rot) << std::endl;
 		std::cout << "ICP odometry position = " << getStringFromVector3d(new_pose.pos) << std::endl;
@@ -281,14 +278,6 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 			{				
 				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
 				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
-
-				if(verbosity_level_ >= 2)
-				{
-					ROS_INFO("# Cloud frame: %s", cloud_msg->header.frame_id.c_str());
-					ROS_INFO("##   Registration");
-					std::cout << "### ICP finished! \nConverged: " << icp.hasConverged() << " \nScore: " << icp.getFitnessScore() << std::endl;
-					std::cout << T << std::endl;
-				}
 			}
 		}
 
