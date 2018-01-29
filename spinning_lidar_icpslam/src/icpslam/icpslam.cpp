@@ -4,8 +4,8 @@
 #include "icpslam/pose_optimizer_g2o.h"
 #include "icpslam/pose_optimizer_gtsam.h"
 
-const double KFS_DIST_THRESH = 0.3;
-const double VERTEX_DIST_THRESH = 0.1;
+const double KFS_DIST_THRESH = 0.2;
+const double VERTEX_DIST_THRESH = 0.05;
 
 
 int main(int argc, char** argv)
@@ -19,12 +19,8 @@ int main(int argc, char** argv)
 	PoseOptimizerGTSAM* pose_optimizer = new PoseOptimizerGTSAM(nh);
 
 	int keyframes_window = 3;
-	unsigned int curr_vertex_key=0,
-		 prev_vertex_key=0, 
-		 last_keyframe_key=0, 
-		 edge_key=0;
-	bool last_keyframe_linked = true,
-		 run_pose_optimization = false;
+	unsigned int curr_vertex_key=0;
+	bool run_pose_optimization = false;
 	long num_keyframes = 0,
 		 num_vertices = 0,
 		 iter = 0;
@@ -39,7 +35,6 @@ int main(int argc, char** argv)
     {
 		if(icp_odometer.isOdomReady())
 		{
-			// ROS_INFO("Iteration %d", iter);
 			bool new_transform = false;
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
@@ -64,7 +59,6 @@ int main(int argc, char** argv)
 				if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
 				{
 					is_keyframe = true;
-					ROS_INFO("Iteration %d", iter);
 					ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
 					ROS_INFO("	Keyframe inserted! ID %d", curr_vertex_key+1);
 					num_keyframes++;
@@ -76,7 +70,6 @@ int main(int argc, char** argv)
 				}
 				else 
 				{
-					ROS_INFO("Iteration %d", iter);
 					ROS_INFO("	ICP vertex inserted! ID %d", curr_vertex_key+1);
 				}
 				pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, is_keyframe);
@@ -85,7 +78,6 @@ int main(int argc, char** argv)
 			}
 			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
 			{
-				ROS_INFO("Iteration %d", iter);
 				ROS_INFO("	Odometry vertex inserted! ID %d", curr_vertex_key+1);
 				pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
 				num_vertices++;
@@ -96,14 +88,11 @@ int main(int argc, char** argv)
 			if(run_pose_optimization)
 			{
 				pose_optimizer->refinePoseGraph();
-				// pose_optimizer->publishRefinedMap();
+				pose_optimizer->publishRefinedMap();
 				run_pose_optimization = false;	
 			}
 
 			pose_optimizer->publishPoseGraphMarkers();
-			
-
-			prev_vertex_key = curr_vertex_key;
 
 			iter++;
 		}

@@ -183,7 +183,7 @@ public:
 	{
 		Pose6DOF p3;
 		p3.pos = p1.rot.inverse() * (p2.pos - p1.pos);
-		p3.rot = p2.rot.inverse() * p1.rot;
+		p3.rot = (p2.rot.inverse() * p1.rot).inverse();
 		p3.rot.normalize();
 
 		p3.cov = p1.cov;

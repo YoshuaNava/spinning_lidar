@@ -1,6 +1,7 @@
 
 #include "icpslam/pose_optimizer_gtsam.h"
 
+#include <gtsam/slam/dataset.h>
 #include <gtsam/base/Vector.h>
 #include <gtsam/geometry/Pose3.h>
 #include <gtsam/geometry/Rot3.h>
@@ -97,12 +98,19 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
 
 void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool is_keyframe)
 {
+    // transform.rot = transform.rot.inverse();
+    // pose.rot = pose.rot.inverse();
     gtsam::Pose3 delta = toGtsamPose3(transform);
     gtsam::Pose3 pose3 = toGtsamPose3(pose);
     // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov);
+    std::cout << "Transform covariance" << transform.cov;
 
     gtsam::Vector6 noise;
-    noise << 1.0, 1.0, 1.0, 2.0, 2.0, 2.0;
+    if(is_keyframe)
+        noise << 100.0, 100.0, 100.0, 0.1, 0.1, 0.1;
+    else
+        noise << 0.1, 0.1, 0.1, 50.0, 50.0, 50.0;
+
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
 
     gtsam::NonlinearFactorGraph new_factor;
@@ -110,7 +118,11 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(curr_vertex_key_-1, curr_vertex_key_, delta, covariance));
     new_value.insert(curr_vertex_key_, pose3);
     isam_->update(new_factor, new_value);
+    isam_->printStats();
     graph_values_ = isam_->calculateEstimate();
+
+    const std::string output_file = "/home/alfredoso/factor_graph.txt";
+    gtsam::writeG2o(isam_->getFactorsUnsafe(), graph_values_, output_file);
 
     std::cout << "Vertex " << curr_vertex_key_ << "\n Pose: \n" << pose;
     std::cout << "Transform: \n" << transform;
@@ -162,32 +174,17 @@ void PoseOptimizerGTSAM::refineVertices()
         graph_poses_.find(key)->second.pos = v_pose.pos;
         graph_poses_.find(key)->second.rot = v_pose.rot;
         Pose6DOF new_pose = graph_poses_.find(key)->second;
-        std::cout << "Vertex " << key << "\n" << new_pose;
+        // std::cout << "Vertex " << key << "\n" << new_pose;
 
         // if(v_key == optimizer_->vertices().size()-1)
         //     latest_pose = v_pose;
     }
-    ROS_ERROR("Vertices refined");
+    ROS_ERROR("Vertices refined\n\n");
 }
 
 void PoseOptimizerGTSAM::refineEdges()
 {
-    ROS_INFO("Refining edges");
-    // uint edge_key = 0;
-    // for( g2o::HyperGraph::EdgeSet::iterator edge_ptr = optimizer_->edges().begin(); edge_ptr != optimizer_->edges().end(); edge_ptr++)
-    // {
-        // g2o::EdgeSE3* edge = dynamic_cast< g2o::EdgeSE3* >( *edge_ptr );
-        // uint vertex1_key = edge->vertices()[0]->id();
-        // uint vertex2_key = edge->vertices()[1]->id();
-        // g2o::VertexSE3* vertex1 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex1_key ));
-	    // g2o::VertexSE3* vertex2 = dynamic_cast< g2o::VertexSE3* >(optimizer_->vertex( vertex2_key ));
-        // Eigen::Matrix4d e_T = (vertex1->estimate() * vertex2->estimate().inverse()).matrix();
-        // Pose6DOF e_pose(e_T);
-        // g2o::SE3Quat se3_pose(e_pose.rot, e_pose.pos);
-        // edge->setMeasurement(se3_pose);
-
-        // edge_key++;
-    // }
+    // ROS_INFO("Refining edges");
 }
 
 
