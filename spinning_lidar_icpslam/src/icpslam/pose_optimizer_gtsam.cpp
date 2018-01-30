@@ -119,7 +119,7 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     graph_values_ = isam_->calculateEstimate();
 
     latest_pose = toPose6DOF(graph_values_.at<gtsam::Pose3>(curr_vertex_key_-1));
-    publishDebugTransform(latest_pose);
+    publishDebugTransform(latest_pose, "debug", odom_frame_);
 
     if(verbosity_level_ >= 2)
     {
@@ -148,26 +148,21 @@ void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF t
     this->refinePoseGraph();
 }
 
-
-void PoseOptimizerGTSAM::publishDebugTransform(Pose6DOF robot_in_debug)
+void PoseOptimizerGTSAM::publishDebugTransform(Pose6DOF robot_in_parent, std::string parent_frame, std::string child_frame)
 {
-	// Debug frame = debug_icpslam_optimizer
-	// Child frame = odom
-	// Robot frame = base_link
-	tf::Pose debug_in_robot = robot_in_debug.toTFPose().inverse();
-	tf::Stamped<tf::Pose> debug_in_child;
+	tf::Pose parent_in_robot = robot_in_parent.toTFPose().inverse();
+	tf::Stamped<tf::Pose> parent_in_child;
 	try
 	{
-		tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(debug_in_robot, ros::Time(0), robot_frame_), debug_in_child);
+		tf_listener_.transformPose(child_frame, tf::Stamped<tf::Pose>(parent_in_robot, ros::Time(0), robot_frame_), parent_in_child);
+		tf::Transform transform;
+		transform.setOrigin( parent_in_child.getOrigin() );
+		transform.setRotation( parent_in_child.getRotation() );
+
+		tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), child_frame, parent_frame));
 	}
 	catch(tf::TransformException e)
 	{ }
-
-	tf::Transform transform;
-	transform.setOrigin( debug_in_child.getOrigin() );
-	transform.setRotation( debug_in_child.getRotation() );
-
-	tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, "debug_optimizer"));
 }
 
 void PoseOptimizerGTSAM::refinePoseGraph()

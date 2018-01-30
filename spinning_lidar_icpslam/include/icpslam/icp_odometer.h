@@ -57,7 +57,7 @@ private:
 	// Translations and rotations estimated by ICP
 	bool new_transform_;
 	int clouds_skipped_, num_clouds_skip_;
-	Pose6DOF rodom_first_pose_, icp_latest_transform_;
+	Pose6DOF rodom_first_pose_, icp_latest_transform_, odom_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
 	std::vector<Pose6DOF> robot_odom_poses_;
 	tf::TransformListener tf_listener_;
@@ -83,17 +83,14 @@ public:
 	
 	Pose6DOF getLatestPoseICPOdometry();
 
-	void getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *icp_pose, Pose6DOF *odom_pose, bool *new_transform);
+	void getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, Pose6DOF *latest_odom_transform, Pose6DOF *odom_pose, bool *new_transform);
 
 	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
 
 	void updateICPOdometry(Eigen::Matrix4d T);
 
 	void laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
-
-	void publishInitialMapTransform(Pose6DOF map_in_robot = Pose6DOF::getIdentity());
 	
-	void publishDebugTransform(Pose6DOF frame_in_robot);
 };
 
 #endif

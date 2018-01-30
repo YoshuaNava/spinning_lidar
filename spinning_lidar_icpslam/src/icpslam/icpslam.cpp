@@ -20,7 +20,8 @@ int main(int argc, char** argv)
 
 	int keyframes_window = 3;
 	unsigned int curr_vertex_key=0;
-	bool run_pose_optimization = false;
+	bool run_pose_optimization = false,
+		 new_transform = false;
 	long num_keyframes = 0,
 		 num_vertices = 0,
 		 iter = 0;
@@ -29,17 +30,16 @@ int main(int argc, char** argv)
 			 prev_robot_odom_pose, 
 			 icp_odom_pose, 
 			 prev_keyframe_pose, 
-			 icp_transform;
+			 icp_transform,
+			 robot_odom_transform;
 
 	while(ros::ok())
     {
 		if(icp_odometer.isOdomReady())
 		{
-			bool new_transform = false;
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-			icp_odometer.getLatestCloud(&cloud, &icp_transform, &icp_odom_pose, &robot_odom_pose, &new_transform);
-			Pose6DOF robot_odom_transform = robot_odom_pose - prev_robot_odom_pose;
+			icp_odometer.getEstimates(&cloud, &icp_transform, &icp_odom_pose, &robot_odom_transform, &robot_odom_pose, &new_transform);
 
 			if(num_vertices == 0)
 			{
@@ -51,7 +51,6 @@ int main(int argc, char** argv)
 				prev_robot_odom_pose = robot_odom_pose;
 				continue;
 			}
-
 
 			if (new_transform)
 			{
@@ -76,6 +75,7 @@ int main(int argc, char** argv)
 					pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, is_keyframe);
 					num_vertices++;
 					prev_robot_odom_pose = robot_odom_pose;
+					new_transform = false;
 				}
 			}
 			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
@@ -97,6 +97,11 @@ int main(int argc, char** argv)
 			pose_optimizer->publishPoseGraphMarkers();
 
 			iter++;
+		}
+		else
+		{
+			Pose6DOF identity = Pose6DOF::getIdentity();
+			pose_optimizer->publishDebugTransform(identity, "debug", "odom");
 		}
         ros::spinOnce();
     }

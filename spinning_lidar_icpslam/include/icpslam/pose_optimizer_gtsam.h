@@ -40,7 +40,7 @@ public:
 
     bool checkLoopClosure();
 
-    void publishDebugTransform(Pose6DOF robot_in_debug);
+    void publishDebugTransform(Pose6DOF robot_in_map, std::string parent_frame, std::string child_frame);
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

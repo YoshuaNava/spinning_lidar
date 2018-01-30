@@ -118,10 +118,11 @@ Pose6DOF ICPOdometer::getLatestPoseICPOdometry()
 	return icp_odom_poses_.back();
 }
 
-void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_transform, Pose6DOF *icp_pose, Pose6DOF *odom_pose, bool *new_transform)
+void ICPOdometer::getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, Pose6DOF *latest_odom_transform, Pose6DOF *odom_pose, bool *new_transform)
 {
 	**cloud = *prev_cloud_;
-	*latest_transform = icp_latest_transform_;
+	*latest_icp_transform = icp_latest_transform_;
+	*latest_odom_transform = odom_latest_transform_;
 
 	if(icp_odom_poses_.size() > 0)
 		*icp_pose = icp_odom_poses_.back();
@@ -134,49 +135,18 @@ void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pos
 	this->new_transform_ = false;
 }
 
-void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
-{
-	ROS_INFO("Map transform callback!");
-	tf::Transform tf_map_in_odom;
-	tf_map_in_odom.setOrigin( tf::Vector3(map_in_robot.pos(0), map_in_robot.pos(1), map_in_robot.pos(2)) );
-    tf_map_in_odom.setRotation( tf::Quaternion(map_in_robot.rot.x(), map_in_robot.rot.y(), map_in_robot.rot.z(), map_in_robot.rot.w()) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_map_in_odom.inverse(), ros::Time::now(), odom_frame_, map_frame_));
-}
-
-void ICPOdometer::publishDebugTransform(Pose6DOF robot_in_debug)
-{
-	// Debug frame = debug_icpslam_odometer
-	// Child frame = odom
-	// Robot frame = base_link
-	tf::Pose debug_in_robot = robot_in_debug.toTFPose().inverse();
-	tf::Stamped<tf::Pose> debug_in_child;
-	try
-	{
-		tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(debug_in_robot, ros::Time(0), robot_frame_), debug_in_child);
-	}
-	catch(tf::TransformException e)
-	{ }
-
-	tf::Transform transform;
-	transform.setOrigin( debug_in_child.getOrigin() );
-	transform.setRotation( debug_in_child.getRotation() );
-
-	tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, "debug_odometer"));
-}
 
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
 {
 	// ROS_INFO("Robot odometry callback!");
 	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
-	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp), 
+	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp),
 			 pose_in_map;
 
 	if(tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)))
 		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
 	else
 		return;
-
-	publishDebugTransform(pose_in_map);
 
 	if(robot_odom_poses_.size() == 0)
 	{
@@ -190,7 +160,8 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	if(num_poses > 0)
 	{
 		Pose6DOF prev_pose(robot_odom_path_.poses[num_poses-1].pose);
-		if(Pose6DOF::distanceEuclidean(pose_in_odom, prev_pose) < POSE_DIST_THRESH)
+		odom_latest_transform_ = pose_in_odom - prev_pose;
+		if(odom_latest_transform_.pos.norm() < POSE_DIST_THRESH)
 		{
 			return;
 		}
@@ -212,9 +183,10 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	true_path_.header.frame_id = map_frame_;
 	true_path_pub_.publish(true_path_);
 
-	if(verbosity_level_ >= 2)
+	if(verbosity_level_ >= 1)
 	{
-		std::cout << "Robot odometry says: " << pose_in_map.toStringQuat("   ");
+		std::cout << "Robot odometry transform: " << odom_latest_transform_.toStringQuat("   ");
+		std::cout << "Robot odometry says: " << pose_in_odom.toStringQuat("   ");
 		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
 		std::cout << std::endl;
 	}

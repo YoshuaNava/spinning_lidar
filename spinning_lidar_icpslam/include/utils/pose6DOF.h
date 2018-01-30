@@ -157,7 +157,7 @@ public:
 	static Pose6DOF getIdentity()
 	{
 		Pose6DOF pose;
-		pose.time_stamp = ros::Time(0);
+		pose.time_stamp = ros::Time().now();
 		pose.pos = Eigen::Vector3d(0,0,0);
 		pose.rot = Eigen::Quaterniond(1,0,0,0);
 		pose.cov = Eigen::MatrixXd::Identity(6,6);
