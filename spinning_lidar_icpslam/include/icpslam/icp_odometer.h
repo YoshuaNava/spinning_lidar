@@ -40,9 +40,9 @@ private:
 	// ROS node handle, URDF frames, topics and publishers
 	ros::NodeHandle nh_;
 	std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
-	std::string robot_odom_topic_, robot_odom_path_topic_, assembled_cloud_topic_;
+	std::string robot_odom_topic_, robot_odom_path_topic_, laser_cloud_topic_;
 	ros::Publisher robot_odom_path_pub_;
-	ros::Subscriber robot_odometry_sub_, assembled_cloud_sub_;
+	ros::Subscriber robot_odometry_sub_, laser_cloud_sub_;
 
 	// Debug topics and publishers
 	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_, true_path_topic_;
@@ -75,10 +75,6 @@ public:
 
 	void registerSubscribers();
 
-	void publishInitialMapTransform(Pose6DOF map_in_robot = Pose6DOF::getIdentity());
-	
-	void publishDebugTransform(Pose6DOF frame_in_robot);
-
 	bool isOdomReady();
 
 	Pose6DOF getFirstPoseRobotOdometry();
@@ -93,7 +89,11 @@ public:
 
 	void updateICPOdometry(Eigen::Matrix4d T);
 
-	void assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+	void laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
+
+	void publishInitialMapTransform(Pose6DOF map_in_robot = Pose6DOF::getIdentity());
+	
+	void publishDebugTransform(Pose6DOF frame_in_robot);
 };
 
 #endif

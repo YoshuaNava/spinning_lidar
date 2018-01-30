@@ -97,7 +97,6 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
 
 void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool is_keyframe)
 {
-    // transform.rot = transform.rot.inverse();
     gtsam::Pose3 delta = toGtsamPose3(transform);
     gtsam::Pose3 pose3 = toGtsamPose3(pose);
     // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov.diagonal());
@@ -117,23 +116,24 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     new_factor.add(gtsam::BetweenFactor<gtsam::Pose3>(curr_vertex_key_-1, curr_vertex_key_, delta, covariance));
     new_value.insert(curr_vertex_key_, pose3);
     isam_->update(new_factor, new_value);
-    isam_->printStats();
     graph_values_ = isam_->calculateEstimate();
 
-    const std::string output_file = "/home/alfredoso/factor_graph.txt";
-    gtsam::writeG2o(isam_->getFactorsUnsafe(), graph_values_, output_file);
+    latest_pose = toPose6DOF(graph_values_.at<gtsam::Pose3>(curr_vertex_key_-1));
+    publishDebugTransform(latest_pose);
 
-    std::cout << "Vertex " << curr_vertex_key_ << "\n Pose: \n" << pose;
-    std::cout << "Transform: \n" << transform;
-
-    // graph_values_.print("Current pose graph:\n");
+    if(verbosity_level_ >= 2)
+    {
+        std::cout << "Vertex " << curr_vertex_key_ << "\n Pose: \n" << pose;
+        std::cout << "Transform: \n" << transform;
+        const std::string output_file = "/home/alfredoso/factor_graph.txt";
+        gtsam::writeG2o(isam_->getFactorsUnsafe(), graph_values_, output_file);
+    }
 }
 
 
 void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, uint *key, bool is_keyframe)
 {
     *key = curr_vertex_key_;
-    ROS_INFO("  New factor");
     this->extendGraph(transform, pose, is_keyframe);
 
     std::pair<uint, uint> edge_keys(curr_vertex_key_-1, curr_vertex_key_);
@@ -149,18 +149,28 @@ void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF t
 }
 
 
-
-bool PoseOptimizerGTSAM::optimizeGraph()
+void PoseOptimizerGTSAM::publishDebugTransform(Pose6DOF robot_in_debug)
 {
-    return true;
+	// Debug frame = debug_icpslam_optimizer
+	// Child frame = odom
+	// Robot frame = base_link
+	tf::Pose debug_in_robot = robot_in_debug.toTFPose().inverse();
+	tf::Stamped<tf::Pose> debug_in_child;
+	try
+	{
+		tf_listener_.transformPose(odom_frame_, tf::Stamped<tf::Pose>(debug_in_robot, ros::Time(0), robot_frame_), debug_in_child);
+	}
+	catch(tf::TransformException e)
+	{ }
+
+	tf::Transform transform;
+	transform.setOrigin( debug_in_child.getOrigin() );
+	transform.setRotation( debug_in_child.getRotation() );
+
+	tf_broadcaster_.sendTransform(tf::StampedTransform(transform, ros::Time::now(), odom_frame_, "debug_optimizer"));
 }
 
 void PoseOptimizerGTSAM::refinePoseGraph()
-{
-    refineVertices();
-}
-
-void PoseOptimizerGTSAM::refineVertices()
 {
     ROS_ERROR("Refining vertices");
     for (const auto& value : graph_values_)
@@ -170,18 +180,9 @@ void PoseOptimizerGTSAM::refineVertices()
         graph_poses_.find(key)->second.pos = v_pose.pos;
         graph_poses_.find(key)->second.rot = v_pose.rot;
         Pose6DOF new_pose = graph_poses_.find(key)->second;
- 
-         // if(v_key == optimizer_->vertices().size()-1)
-        //     latest_pose = v_pose;
     }
     ROS_ERROR("Vertices refined\n\n");
 }
-
-void PoseOptimizerGTSAM::refineEdges()
-{
-    // ROS_INFO("Refining edges");
-}
-
 
 bool PoseOptimizerGTSAM::checkLoopClosure()
 {

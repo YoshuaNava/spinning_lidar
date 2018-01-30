@@ -36,15 +36,11 @@ public:
 
     void addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, uint *key, bool is_keyframe);
 
-    bool optimizeGraph();
-
     void refinePoseGraph();
 
-    void refineVertices();
-
-    void refineEdges();
-
     bool checkLoopClosure();
+
+    void publishDebugTransform(Pose6DOF robot_in_debug);
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 

@@ -54,24 +54,22 @@ public:
 
 	Pose6DOF operator -(Pose6DOF &p2)
 	{
-		// Pose6DOF p3 = subtract(p2, *this);
-		Pose6DOF p2_inv = p2.inverse();
-		Pose6DOF p3 = (*this) + p2_inv;
+		Pose6DOF p3 = subtract(p2, *this);
 		return p3;
 	}
 
 	Pose6DOF& operator =(Pose6DOF pose)
 	{
-		this->time_stamp = pose.time_stamp;
-		this->pos(0) = pose.pos(0);
-		this->pos(1) = pose.pos(1);
-		this->pos(2) = pose.pos(2);
+		time_stamp = pose.time_stamp;
+		pos(0) = pose.pos(0);
+		pos(1) = pose.pos(1);
+		pos(2) = pose.pos(2);
 
-		this->rot.x() = pose.rot.x();
-		this->rot.y() = pose.rot.y();
-		this->rot.z() = pose.rot.z();
-		this->rot.w() = pose.rot.w();
-		this->cov = pose.cov;
+		rot.x() = pose.rot.x();
+		rot.y() = pose.rot.y();
+		rot.z() = pose.rot.z();
+		rot.w() = pose.rot.w();
+		cov = pose.cov;
 		
 		return *this;
 	}
@@ -130,6 +128,7 @@ public:
 	static Pose6DOF compose(Pose6DOF &p1, Pose6DOF &p2)
 	{
 		Pose6DOF p3;
+		p3.time_stamp = p2.time_stamp;
 		p3.pos = p1.pos + p1.rot.toRotationMatrix() * p2.pos;
 		p3.rot = p1.rot * p2.rot;
 		p3.rot.normalize();
@@ -139,6 +138,7 @@ public:
 	static Pose6DOF subtract(Pose6DOF &p1, Pose6DOF &p2)
 	{
 		Pose6DOF p3;
+		p3.time_stamp = p1.time_stamp;
 		p3.pos = p1.rot.inverse() * (p2.pos - p1.pos);
 		p3.rot = p2.rot * p1.rot.inverse();
 		p3.rot.normalize();

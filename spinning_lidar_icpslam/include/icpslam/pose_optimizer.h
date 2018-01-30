@@ -90,9 +90,9 @@ public:
 
     virtual void refinePoseGraph()=0;
 
-    virtual void refineVertices()=0;
+    // virtual void refineVertices()=0;
 
-    virtual void refineEdges()=0;
+    // virtual void refineEdges()=0;
 
     virtual bool checkLoopClosure()=0;
 
