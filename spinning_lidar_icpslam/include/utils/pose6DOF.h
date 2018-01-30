@@ -35,7 +35,7 @@ public:
 		setIdentity();
 		time_stamp = stamp;
 		this->fromTMatrix(T);
-		cov = Eigen::MatrixXd::Zero(6,6);
+		cov = Eigen::MatrixXd::Identity(6,6);
 	}
 
 	Pose6DOF(Eigen::Matrix4d &T, std::string tgt_frame, std::string src_frame, tf::TransformListener *tf_listener, ros::Time stamp = ros::Time(0))
@@ -43,62 +43,21 @@ public:
 		setIdentity();
 		time_stamp = stamp;
 		this->fromTMatrixInFixedFrame(T, tgt_frame, src_frame, tf_listener);
-		cov = Eigen::MatrixXd::Zero(6,6);
+		cov = Eigen::MatrixXd::Identity(6,6);
 	}
 
-	Pose6DOF(geometry_msgs::Pose &pose_msg, ros::Time stamp = ros::Time(0))
-	{
-		setIdentity();
-		time_stamp = stamp;
-		this->fromROSPose(pose_msg);
-		cov = Eigen::MatrixXd::Zero(6,6);
-	}
-
-	Pose6DOF(geometry_msgs::Pose &pose_msg, std::string tgt_frame, std::string src_frame, tf::TransformListener *tf_listener, ros::Time stamp = ros::Time(0))
-	{
-		setIdentity();
-		time_stamp = stamp;
-		this->fromROSPoseInFixedFrame(pose_msg, tgt_frame, src_frame, tf_listener);
-		cov = Eigen::MatrixXd::Zero(6,6);
-	}
-
-	Pose6DOF(geometry_msgs::PoseWithCovariance &pose_msg, ros::Time stamp = ros::Time(0))
-	{
-		setIdentity();
-		time_stamp = stamp;
-		this->fromROSPoseWithCovariance(pose_msg);
-	}
-	
-	Pose6DOF(tf::Transform &transform, ros::Time stamp = ros::Time(0))
-	{
-		setIdentity();
-		time_stamp = stamp;
-		this->fromTFTransform(transform);
-		cov = Eigen::MatrixXd::Zero(6,6);
-	}
-
-	Pose6DOF(geometry_msgs::Transform &transform, ros::Time stamp = ros::Time(0))
-	{
-		setIdentity();
-		time_stamp = stamp;
-		this->fromROSTransform(transform);
-		cov = Eigen::MatrixXd::Zero(6,6);
-	}
-
-	Pose6DOF& operator +(Pose6DOF &p2)
+	Pose6DOF operator +(Pose6DOF &p2)
 	{
 		Pose6DOF p3 = compose(*this, p2);
-		pos = p3.pos;
-		rot = p3.rot;
-		return *this;
+		return p3;
 	}
 
-	Pose6DOF& operator -(Pose6DOF &p2)
+	Pose6DOF operator -(Pose6DOF &p2)
 	{
-		Pose6DOF p3 = subtract(*this, p2);
-		pos = p3.pos;
-		rot = p3.rot;
-		return *this;
+		// Pose6DOF p3 = subtract(p2, *this);
+		Pose6DOF p2_inv = p2.inverse();
+		Pose6DOF p3 = (*this) + p2_inv;
+		return p3;
 	}
 
 	Pose6DOF& operator =(Pose6DOF pose)
@@ -128,15 +87,9 @@ public:
 		return os;
 	}
 
-
-	Pose6DOF setIdentity()
+	Pose6DOF inverse()
 	{
-		time_stamp = ros::Time(0);
-		pos = Eigen::Vector3d(0,0,0);
-		rot = Eigen::Quaterniond(1,0,0,0);
-		cov = Eigen::MatrixXd::Zero(6,6);
-		cov.setIdentity();
-		return *this;
+		return inverse(*this);
 	}
 
 	Pose6DOF compose(Pose6DOF &p2)
@@ -155,9 +108,13 @@ public:
 		return *this;
 	}
 
-	Pose6DOF inverse()
+	Pose6DOF setIdentity()
 	{
-		return inverse(*this);
+		time_stamp = ros::Time(0);
+		pos = Eigen::Vector3d(0,0,0);
+		rot = Eigen::Quaterniond(1,0,0,0);
+		cov = Eigen::MatrixXd::Identity(6,6);
+		return *this;
 	}
 
 	double distanceEuclidean(Pose6DOF p2)
@@ -183,9 +140,8 @@ public:
 	{
 		Pose6DOF p3;
 		p3.pos = p1.rot.inverse() * (p2.pos - p1.pos);
-		p3.rot = (p2.rot.inverse() * p1.rot).inverse();
+		p3.rot = p2.rot * p1.rot.inverse();
 		p3.rot.normalize();
-
 		p3.cov = p1.cov;
 		return p3;
 	}
@@ -204,8 +160,7 @@ public:
 		pose.time_stamp = ros::Time(0);
 		pose.pos = Eigen::Vector3d(0,0,0);
 		pose.rot = Eigen::Quaterniond(1,0,0,0);
-		pose.cov = Eigen::MatrixXd::Zero(6,6);
-		pose.cov.setIdentity();
+		pose.cov = Eigen::MatrixXd::Identity(6,6);
 		return pose;
 	}
 
@@ -252,6 +207,45 @@ public:
 		Pose6DOF pose_in_tgt(tf_in_tgt, pose_in_src.time_stamp);
 		pose_in_tgt.cov = pose_in_src.cov;
 		return pose_in_tgt;
+	}
+
+	Pose6DOF(geometry_msgs::Pose &pose_msg, ros::Time stamp = ros::Time(0))
+	{
+		setIdentity();
+		time_stamp = stamp;
+		this->fromROSPose(pose_msg);
+		cov = Eigen::MatrixXd::Identity(6,6);
+	}
+
+	Pose6DOF(geometry_msgs::Pose &pose_msg, std::string tgt_frame, std::string src_frame, tf::TransformListener *tf_listener, ros::Time stamp = ros::Time(0))
+	{
+		setIdentity();
+		time_stamp = stamp;
+		this->fromROSPoseInFixedFrame(pose_msg, tgt_frame, src_frame, tf_listener);
+		cov = Eigen::MatrixXd::Identity(6,6);
+	}
+
+	Pose6DOF(geometry_msgs::PoseWithCovariance &pose_msg, ros::Time stamp = ros::Time(0))
+	{
+		setIdentity();
+		time_stamp = stamp;
+		this->fromROSPoseWithCovariance(pose_msg);
+	}
+	
+	Pose6DOF(tf::Transform &transform, ros::Time stamp = ros::Time(0))
+	{
+		setIdentity();
+		time_stamp = stamp;
+		this->fromTFTransform(transform);
+		cov = Eigen::MatrixXd::Identity(6,6);
+	}
+
+	Pose6DOF(geometry_msgs::Transform &transform, ros::Time stamp = ros::Time(0))
+	{
+		setIdentity();
+		time_stamp = stamp;
+		this->fromROSTransform(transform);
+		cov = Eigen::MatrixXd::Identity(6,6);
 	}
 
 	void fromTMatrix(Eigen::Matrix4d &T)

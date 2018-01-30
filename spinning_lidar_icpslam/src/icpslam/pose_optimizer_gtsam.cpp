@@ -61,13 +61,12 @@ Pose6DOF toPose6DOF(const gtsam::Pose3& pose3)
   return out;
 }
 
-gtsam::noiseModel::Gaussian::shared_ptr toGtsamGaussian(const Eigen::MatrixXd &cov)
+gtsam::noiseModel::Gaussian::shared_ptr toGtsamGaussian(const Eigen::VectorXd &cov)
 {
   gtsam::Matrix66 gtsam_cov;
 
   for (int i = 0; i < 6; ++i)
-    for (int j = 0; j < 6; ++j)
-      gtsam_cov(i, j) = cov(i, j);
+      gtsam_cov(i, i) = cov(i);
 
   return gtsam::noiseModel::Gaussian::Covariance(gtsam_cov);
 }
@@ -99,17 +98,17 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
 void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool is_keyframe)
 {
     // transform.rot = transform.rot.inverse();
-    // pose.rot = pose.rot.inverse();
     gtsam::Pose3 delta = toGtsamPose3(transform);
     gtsam::Pose3 pose3 = toGtsamPose3(pose);
-    // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov);
-    std::cout << "Transform covariance" << transform.cov;
+    // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov.diagonal());
+    // std::cout << "Transform covariance = " << transform.cov.diagonal().transpose() << std::endl;
 
     gtsam::Vector6 noise;
     if(is_keyframe)
-        noise << 100.0, 100.0, 100.0, 0.1, 0.1, 0.1;
+        noise << 100.0, 100.0, 100.0, 1.0, 1.0, 1.0;
     else
-        noise << 0.1, 0.1, 0.1, 50.0, 50.0, 50.0;
+        noise << 1.0, 1.0, 1.0, 50.0, 50.0, 50.0;
+        // noise = transform.cov.diagonal();
 
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
 
@@ -153,9 +152,6 @@ void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF t
 
 bool PoseOptimizerGTSAM::optimizeGraph()
 {
-    // graph_values_.print("Optimized pose graph:\n");
-    // graph_values_ = isam_->calculateEstimate();
-
     return true;
 }
 
@@ -174,9 +170,8 @@ void PoseOptimizerGTSAM::refineVertices()
         graph_poses_.find(key)->second.pos = v_pose.pos;
         graph_poses_.find(key)->second.rot = v_pose.rot;
         Pose6DOF new_pose = graph_poses_.find(key)->second;
-        // std::cout << "Vertex " << key << "\n" << new_pose;
-
-        // if(v_key == optimizer_->vertices().size()-1)
+ 
+         // if(v_key == optimizer_->vertices().size()-1)
         //     latest_pose = v_pose;
     }
     ROS_ERROR("Vertices refined\n\n");

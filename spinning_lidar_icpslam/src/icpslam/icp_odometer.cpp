@@ -263,7 +263,6 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 		icp.setTransformationEpsilon(ICP_EPSILON);
 		icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
 		icp.setRANSACIterations(0);
-		// icp.setMaximumOptimizerIterations(50);
 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 		icp.align(*aligned_cloud);
