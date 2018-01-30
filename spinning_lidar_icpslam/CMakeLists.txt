@@ -84,6 +84,9 @@ target_link_libraries(${PROJECT_NAME}
 
 
 ## Utils for handling the spinning lidar point clouds
+add_executable(lidar_scan_to_cloud src/laser_processing/lidar_scan_to_cloud.cpp)
+target_link_libraries(lidar_scan_to_cloud ${catkin_LIBRARIES})
+
 add_executable(lidar_scan_filtering src/laser_processing/lidar_scan_filtering.cpp)
 target_link_libraries(lidar_scan_filtering ${catkin_LIBRARIES})
 

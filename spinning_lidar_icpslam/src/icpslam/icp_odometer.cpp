@@ -61,6 +61,8 @@ void ICPOdometer::loadParameters()
 	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
 	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
+	nh_.param("num_clouds_skip", num_clouds_skip_, 2);
+
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
 	{
@@ -94,24 +96,6 @@ void ICPOdometer::registerSubscribers()
 {
 	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 1, &ICPOdometer::robotOdometryCallback, this);
 	assembled_cloud_sub_ = nh_.subscribe(assembled_cloud_topic_, 1, &ICPOdometer::assembledCloudCallback, this);
-}
-
-void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
-{
-	ROS_INFO("Map transform callback!");
-	tf::Transform tf_map_in_odom;
-	tf_map_in_odom.setOrigin( tf::Vector3(map_in_robot.pos(0), map_in_robot.pos(1), map_in_robot.pos(2)) );
-    tf_map_in_odom.setRotation( tf::Quaternion(map_in_robot.rot.x(), map_in_robot.rot.y(), map_in_robot.rot.z(), map_in_robot.rot.w()) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_map_in_odom.inverse(), ros::Time::now(), odom_frame_, map_frame_));
-}
-
-void ICPOdometer::publishDebugTransform(Pose6DOF frame_in_robot)
-{
-	// ROS_INFO("Map transform callback!");
-	tf::Transform tf_frame_in_robot;
-	tf_frame_in_robot.setOrigin( tf::Vector3(frame_in_robot.pos(0), frame_in_robot.pos(1), frame_in_robot.pos(2)) );
-    tf_frame_in_robot.setRotation( tf::Quaternion(frame_in_robot.rot.x(), frame_in_robot.rot.y(), frame_in_robot.rot.z(), frame_in_robot.rot.w()) );
-    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot.inverse(), ros::Time::now(), odom_frame_, "debug_frame_2"));
 }
 
 bool ICPOdometer::isOdomReady()
@@ -150,6 +134,24 @@ void ICPOdometer::getLatestCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pos
 	this->new_transform_ = false;
 }
 
+void ICPOdometer::publishInitialMapTransform(Pose6DOF map_in_robot)
+{
+	ROS_INFO("Map transform callback!");
+	tf::Transform tf_map_in_odom;
+	tf_map_in_odom.setOrigin( tf::Vector3(map_in_robot.pos(0), map_in_robot.pos(1), map_in_robot.pos(2)) );
+    tf_map_in_odom.setRotation( tf::Quaternion(map_in_robot.rot.x(), map_in_robot.rot.y(), map_in_robot.rot.z(), map_in_robot.rot.w()) );
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_map_in_odom.inverse(), ros::Time::now(), odom_frame_, map_frame_));
+}
+
+void ICPOdometer::publishDebugTransform(Pose6DOF frame_in_robot)
+{
+	// ROS_INFO("Map transform callback!");
+	tf::Transform tf_frame_in_robot;
+	tf_frame_in_robot.setOrigin( tf::Vector3(frame_in_robot.pos(0), frame_in_robot.pos(1), frame_in_robot.pos(2)) );
+    tf_frame_in_robot.setRotation( tf::Quaternion(frame_in_robot.rot.x(), frame_in_robot.rot.y(), frame_in_robot.rot.z(), frame_in_robot.rot.w()) );
+    tf_broadcaster_.sendTransform(tf::StampedTransform(tf_frame_in_robot.inverse(), ros::Time::now(), odom_frame_, "debug_frame_2"));
+}
+
 void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
 {
 	// ROS_INFO("Robot odometry callback!");
@@ -164,12 +166,9 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 
 	if(robot_odom_poses_.size() == 0)
 	{
-		// rodom_first_pose.setIdentity();
-		rodom_first_pose = pose_in_map;
+		// rodom_first_pose_.setIdentity();
+		rodom_first_pose_ = pose_in_map;
 	}
-	
-	Pose6DOF origin_diff = Pose6DOF::subtract(pose_in_map, rodom_first_pose);
-	publishDebugTransform(origin_diff);
 	
 	robot_odom_poses_.push_back(pose_in_map);
 
@@ -193,6 +192,7 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	robot_odom_path_.header.stamp = ros::Time().now();
 	robot_odom_path_.header.frame_id = map_frame_;
 	robot_odom_path_pub_.publish(robot_odom_path_);
+
 	if( tf_listener_.canTransform(odom_frame_, map_frame_, ros::Time(0)) )
 	{
 		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
@@ -214,12 +214,13 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	// ROS_INFO("ICP odometry update!");
 	new_transform_ = true;
 	Pose6DOF transform_in_odom(T, ros::Time().now());
-	// transform_in_odom.pos *= -1.0;
 	icp_latest_transform_ = transform_in_odom;
 
 	Pose6DOF prev_pose = getLatestPoseICPOdometry();
 	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_odom);
 	new_pose.time_stamp = ros::Time().now();
+
+	publishDebugTransform(new_pose.inverse());
 
 	icp_odom_poses_.push_back(new_pose);
 	publishOdometry(new_pose.pos, new_pose.rot, map_frame_, odom_frame_, ros::Time().now(), &icp_odom_pub_);
@@ -228,12 +229,13 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	icp_odom_path_.header.frame_id = map_frame_;
 	icp_odom_path_pub_.publish(icp_odom_path_);
 
-	if(verbosity_level_ >= 2)
+	if(verbosity_level_ >= 1)
 	{
 		std::cout << std::endl;
 		std::cout << "Initial position = " << getStringFromVector3d(icp_odom_poses_[0].pos) << std::endl;
 		std::cout << "Initial rotation = " << getStringFromQuaternion(icp_odom_poses_[0].rot) << std::endl;
 		std::cout << "Prev odom pose = \n" << prev_pose;
+		std::cout << "Transformation = \n" << T << "\n";
 		std::cout << "Cloud translation = " << getStringFromVector3d(transform_in_odom.pos) << std::endl;
 		std::cout << "Cloud rotation = " << getStringFromQuaternion(transform_in_odom.rot) << std::endl;
 		std::cout << "ICP odometry position = " << getStringFromVector3d(new_pose.pos) << std::endl;
@@ -264,23 +266,38 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 		icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
 		icp.setRANSACIterations(0);
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-		icp.align(*aligned_cloud);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>()), unused_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+		icp.align(*unused_cloud);
 		Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
 		
 		if(icp.hasConverged())
 		{
+			// ROS_INFO("		ICP converged");
 			updateICPOdometry(T);
 
-			// Publishing for debug
 			if(verbosity_level_ >= 1)
-			{				
+			{
+				Eigen::Matrix4d T_inv = T.inverse();
+				pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
 				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
 				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
 			}
 		}
 
 	}
-	
-	*prev_cloud_ = *curr_cloud_;
+	else
+	{
+		*prev_cloud_ = *curr_cloud_;
+		clouds_skipped_ = 0;
+	}
+
+	if(clouds_skipped_ >= num_clouds_skip_)
+	{
+		*prev_cloud_ = *curr_cloud_;
+		clouds_skipped_ = 0;
+	}
+	else
+	{
+		clouds_skipped_++;
+	}
 }

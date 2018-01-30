@@ -16,7 +16,8 @@
         <param name="icp_odom_path_topic" type="string" value="/icpslam/icp_odom_path" />
         <param name="true_path_topic" type="string" value="/icpslam/true_path" />
 
-		<param name="assembled_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" />
+		<!-- <param name="assembled_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" /> -->
+		<param name="assembled_cloud_topic" type="string" value="/front/cloud" />
         <param name="prev_cloud_topic" type="string" value="/icpslam/prev_cloud" />
         <param name="aligned_cloud_topic" type="string" value="/icpslam/aligned_cloud" />
         <param name="increment_cloud_topic" type="string" value="/icpslam/increment_cloud" />
@@ -29,6 +30,7 @@
 		<param name="publish_map_transform" type="bool" value="false" />
     </node>
 
+    <node name="lidar_scan_to_cloud_node" pkg="spinning_lidar_icpslam" type="lidar_scan_to_cloud" output="screen" />
 
 <!--     <node name="gazebo_ref_pub_node" pkg="spinning_lidar_icpslam" type="gazebo_ref_frame_pub" output="screen">
         <param name="parent_frame" type="string" value="map" />

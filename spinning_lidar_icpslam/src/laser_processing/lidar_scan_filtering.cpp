@@ -1,7 +1,6 @@
 
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <tf/transform_listener.h>
 #include <tf/message_filter.h>

@@ -27,9 +27,6 @@ class ICPOdometer
 {
 private:
 	// Constants
-	typedef ros::Time TimeStamp;
-	typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-
 	const double POSE_DIST_THRESH = 0.1;
 	const double ICP_FITNESS_THRESH = 0.1;
 	const double ICP_MAX_CORR_DIST = 1.0;
@@ -47,19 +44,20 @@ private:
 	ros::Publisher robot_odom_path_pub_;
 	ros::Subscriber robot_odometry_sub_, assembled_cloud_sub_;
 
-	// ICP odometry debug topics and publishers
+	// Debug topics and publishers
 	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_, true_path_topic_;
 	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_, true_path_pub_;
 
-	// PCL clouds for odometry
+	// PCL clouds
 	pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_, curr_cloud_;
 
-	// ICP odometry containers
+	// Odometry path containers
 	nav_msgs::Path robot_odom_path_, icp_odom_path_, true_path_;
 
 	// Translations and rotations estimated by ICP
 	bool new_transform_;
-	Pose6DOF rodom_first_pose, icp_latest_transform_;
+	int clouds_skipped_, num_clouds_skip_;
+	Pose6DOF rodom_first_pose_, icp_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
 	std::vector<Pose6DOF> robot_odom_poses_;
 	tf::TransformListener tf_listener_;
