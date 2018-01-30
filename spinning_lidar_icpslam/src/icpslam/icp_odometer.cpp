@@ -214,10 +214,10 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	// ROS_INFO("ICP odometry update!");
 	new_transform_ = true;
 	Pose6DOF transform_in_odom(T, ros::Time().now());
-	transform_in_odom.pos *= -1.0;
+	// transform_in_odom.pos *= -1.0;
 	icp_latest_transform_ = transform_in_odom;
 
-	Pose6DOF prev_pose = getLatestPoseRobotOdometry();
+	Pose6DOF prev_pose = getLatestPoseICPOdometry();
 	Pose6DOF new_pose = Pose6DOF::compose(prev_pose, transform_in_odom);
 	new_pose.time_stamp = ros::Time().now();
 
@@ -257,8 +257,8 @@ void ICPOdometer::assembledCloudCallback(const sensor_msgs::PointCloud2::ConstPt
 		// Registration
 		// GICP is said to be better, but what about NICP from Serafin?
 		pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		icp.setInputSource(prev_cloud_);
-		icp.setInputTarget(curr_cloud_);
+		icp.setInputSource(curr_cloud_);
+		icp.setInputTarget(prev_cloud_);
 		icp.setMaximumIterations(ICP_MAX_ITERS);
 		icp.setTransformationEpsilon(ICP_EPSILON);
 		icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
