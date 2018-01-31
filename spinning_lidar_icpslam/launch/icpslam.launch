@@ -17,6 +17,7 @@
         <param name="true_path_topic" type="string" value="/icpslam/true_path" />
 
 		<!-- <param name="laser_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" /> -->
+		<param name="num_clouds_skip" value="5" />
 		<param name="laser_cloud_topic" type="string" value="/front/cloud" />
         <param name="prev_cloud_topic" type="string" value="/icpslam/prev_cloud" />
         <param name="aligned_cloud_topic" type="string" value="/icpslam/aligned_cloud" />

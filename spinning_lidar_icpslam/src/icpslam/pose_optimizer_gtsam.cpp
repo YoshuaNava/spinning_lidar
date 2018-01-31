@@ -103,10 +103,10 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     // std::cout << "Transform covariance = " << transform.cov.diagonal().transpose() << std::endl;
 
     gtsam::Vector6 noise;
-    if(is_keyframe)
-        noise << 100.0, 100.0, 100.0, 1.0, 1.0, 1.0;
-    else
-        noise << 1.0, 1.0, 1.0, 50.0, 50.0, 50.0;
+    // if(is_keyframe)
+    //     noise << 100.0, 100.0, 100.0, 1.0, 1.0, 1.0;
+    // else
+    noise << 1.0, 1.0, 1.0, 5.0, 5.0, 5.0;
         // noise = transform.cov.diagonal();
 
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
@@ -121,7 +121,7 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
     latest_pose = toPose6DOF(graph_values_.at<gtsam::Pose3>(curr_vertex_key_-1));
     publishDebugTransform(latest_pose, "debug", odom_frame_);
 
-    if(verbosity_level_ >= 2)
+    if(verbosity_level_ >= 1)
     {
         std::cout << "Vertex " << curr_vertex_key_ << "\n Pose: \n" << pose;
         std::cout << "Transform: \n" << transform;
@@ -167,7 +167,6 @@ void PoseOptimizerGTSAM::publishDebugTransform(Pose6DOF robot_in_parent, std::st
 
 void PoseOptimizerGTSAM::refinePoseGraph()
 {
-    ROS_ERROR("Refining vertices");
     for (const auto& value : graph_values_)
     {
         const unsigned int key = value.key;
@@ -176,7 +175,7 @@ void PoseOptimizerGTSAM::refinePoseGraph()
         graph_poses_.find(key)->second.rot = v_pose.rot;
         Pose6DOF new_pose = graph_poses_.find(key)->second;
     }
-    ROS_ERROR("Vertices refined\n\n");
+    ROS_INFO("      Vertices refined\n\n");
 }
 
 bool PoseOptimizerGTSAM::checkLoopClosure()

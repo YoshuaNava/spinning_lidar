@@ -34,6 +34,9 @@ ICPOdometer::ICPOdometer(ros::NodeHandle nh) :
 {
 	robot_odom_inited_ = false;
 	new_transform_ = false;
+	rodom_first_pose_.setIdentity();
+	odom_latest_transform_.setIdentity();
+	icp_latest_transform_.setIdentity();
 	init();	
 }
 
@@ -61,7 +64,7 @@ void ICPOdometer::loadParameters()
 	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
 	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
-	nh_.param("num_clouds_skip", num_clouds_skip_, 2);
+	nh_.param("num_clouds_skip", num_clouds_skip_, 10);
 
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
@@ -94,7 +97,7 @@ void ICPOdometer::advertisePublishers()
 
 void ICPOdometer::registerSubscribers()
 {
-	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 1, &ICPOdometer::robotOdometryCallback, this);
+	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 5, &ICPOdometer::robotOdometryCallback, this);
 	laser_cloud_sub_ = nh_.subscribe(laser_cloud_topic_, 1, &ICPOdometer::laserCloudCallback, this);
 }
 
@@ -144,51 +147,53 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 			 pose_in_map;
 
 	if(tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)))
+	{
 		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
-	else
-		return;
-
-	if(robot_odom_poses_.size() == 0)
-	{
-		// rodom_first_pose_.setIdentity();
-		rodom_first_pose_ = pose_in_map;
+		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
+		true_path_.header.stamp = ros::Time().now();
+		true_path_.header.frame_id = map_frame_;
+		true_path_pub_.publish(true_path_);
 	}
-	
-	robot_odom_poses_.push_back(pose_in_map);
-
-	int num_poses = robot_odom_path_.poses.size();
-	if(num_poses > 0)
+	else
 	{
-		Pose6DOF prev_pose(robot_odom_path_.poses[num_poses-1].pose);
-		odom_latest_transform_ = pose_in_odom - prev_pose;
-		if(odom_latest_transform_.pos.norm() < POSE_DIST_THRESH)
+		ROS_ERROR("Transform from odom to map frame not available");
+		return;
+	}
+
+	Pose6DOF pose_debug = pose_in_odom - rodom_first_pose_;
+	int num_poses = robot_odom_poses_.size();
+	if(num_poses == 0)
+	{
+		rodom_first_pose_ = pose_in_odom;
+		robot_odom_poses_.push_back(Pose6DOF::getIdentity());
+		icp_odom_poses_.push_back(Pose6DOF::getIdentity());
+		insertPoseInPath(Pose6DOF::getIdentity().toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
+		robot_odom_inited_ = true;
+	}
+	else
+	{
+		Pose6DOF prev_pose = getLatestPoseRobotOdometry();
+		odom_latest_transform_ = pose_debug - prev_pose;
+		robot_odom_poses_.push_back(pose_debug);
+		if(verbosity_level_ >= 2)
+		{
+			std::cout << "Robot odometry transform: " << odom_latest_transform_.toStringQuat("   ");
+			std::cout << "Robot odometry says: " << pose_debug.toStringQuat("   ");
+			std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
+			std::cout << std::endl;
+		}
+
+
+		Pose6DOF prev_pose_path(robot_odom_path_.poses[num_poses-1].pose); 
+    	if(Pose6DOF::distanceEuclidean(pose_debug, prev_pose_path) < POSE_DIST_THRESH) 
 		{
 			return;
 		}
-	}
-	else
-	{
-		icp_odom_poses_.push_back(pose_in_map);
-		robot_odom_inited_ = true;
-		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, icp_odom_path_);
-	}
+		insertPoseInPath(pose_debug.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
+		robot_odom_path_.header.stamp = ros::Time().now();
+		robot_odom_path_.header.frame_id = map_frame_;
+		robot_odom_path_pub_.publish(robot_odom_path_);
 
-	insertPoseInPath(pose_in_odom.toROSPose(), odom_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
-	robot_odom_path_.header.stamp = ros::Time().now();
-	robot_odom_path_.header.frame_id = odom_frame_;
-	robot_odom_path_pub_.publish(robot_odom_path_);
-
-	insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
-	true_path_.header.stamp = ros::Time().now();
-	true_path_.header.frame_id = map_frame_;
-	true_path_pub_.publish(true_path_);
-
-	if(verbosity_level_ >= 1)
-	{
-		std::cout << "Robot odometry transform: " << odom_latest_transform_.toStringQuat("   ");
-		std::cout << "Robot odometry says: " << pose_in_odom.toStringQuat("   ");
-		std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
-		std::cout << std::endl;
 	}
 }
 
@@ -225,6 +230,9 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
+	if(!robot_odom_inited_) 
+		return;
+
 	// ROS_INFO("Cloud callback!");
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);
@@ -233,7 +241,13 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 	voxel_filter.setLeafSize(0.05, 0.05, 0.05);
 	voxel_filter.filter(*curr_cloud_);
 
-	if(prev_cloud_->points.size() > 0 && robot_odom_inited_)
+	if(prev_cloud_->points.size() == 0)
+	{
+		*prev_cloud_ = *curr_cloud_;
+		return;
+	}
+
+	if(clouds_skipped_ >= num_clouds_skip_)
 	{
 		// Registration
 		// GICP is said to be better, but what about NICP from Serafin?
@@ -253,26 +267,17 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		{
 			// ROS_INFO("		ICP converged");
 			updateICPOdometry(T);
+			new_transform_ = true;
+			Eigen::Matrix4d T_inv = T.inverse();
+			pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
 
 			if(verbosity_level_ >= 1)
 			{
-				Eigen::Matrix4d T_inv = T.inverse();
-				pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
+
 				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
 				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
 			}
 		}
-
-	}
-	else
-	{
-		*prev_cloud_ = *curr_cloud_;
-		clouds_skipped_ = 0;
-	}
-
-	if(clouds_skipped_ >= num_clouds_skip_)
-	{
-		new_transform_ = true;
 		*prev_cloud_ = *curr_cloud_;
 		clouds_skipped_ = 0;
 	}
@@ -280,4 +285,5 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 	{
 		clouds_skipped_++;
 	}
+
 }
