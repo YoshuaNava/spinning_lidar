@@ -57,6 +57,7 @@ private:
 	// Translations and rotations estimated by ICP
 	bool new_transform_;
 	int clouds_skipped_, num_clouds_skip_;
+	bool aggregate_clouds_;
 	Pose6DOF rodom_first_pose_, icp_latest_transform_, odom_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
 	std::vector<Pose6DOF> robot_odom_poses_;

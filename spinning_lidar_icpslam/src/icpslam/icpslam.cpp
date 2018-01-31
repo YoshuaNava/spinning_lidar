@@ -78,13 +78,13 @@ int main(int argc, char** argv)
 					new_transform = false;
 				}
 			}
-			// else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
-			// {
-			// 	ROS_INFO("  Odometry vertex inserted! ID %d", curr_vertex_key+1);
-			// 	pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
-			// 	num_vertices++;
-			// 	prev_robot_odom_pose = robot_odom_pose;
-			// }
+			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+			{
+				ROS_INFO("  Odometry vertex inserted! ID %d", curr_vertex_key+1);
+				pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
+				num_vertices++;
+				prev_robot_odom_pose = robot_odom_pose;
+			}
 
 
 			if(run_pose_optimization)

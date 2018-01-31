@@ -99,15 +99,12 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
 {
     gtsam::Pose3 delta = toGtsamPose3(transform);
     gtsam::Pose3 pose3 = toGtsamPose3(pose);
-    // gtsam::noiseModel::Gaussian::shared_ptr covariance = toGtsamGaussian(transform.cov.diagonal());
-    // std::cout << "Transform covariance = " << transform.cov.diagonal().transpose() << std::endl;
 
     gtsam::Vector6 noise;
-    // if(is_keyframe)
-    //     noise << 100.0, 100.0, 100.0, 1.0, 1.0, 1.0;
-    // else
-    noise << 1.0, 1.0, 1.0, 5.0, 5.0, 5.0;
-        // noise = transform.cov.diagonal();
+    if(is_keyframe)
+        noise << 100.0, 100.0, 100.0, 1.0, 1.0, 1.0;
+    else
+        noise << 1.0, 1.0, 1.0, 50.0, 50.0, 50.0;
 
     gtsam::noiseModel::Diagonal::shared_ptr covariance(gtsam::noiseModel::Diagonal::Sigmas(noise));
 

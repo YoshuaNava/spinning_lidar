@@ -64,6 +64,7 @@ void ICPOdometer::loadParameters()
 	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
 	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
+	nh_.param("aggregate_clouds", aggregate_clouds_, false);
 	nh_.param("num_clouds_skip", num_clouds_skip_, 10);
 
 	// ICP odometry debug topics
@@ -213,7 +214,7 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 	icp_odom_path_.header.frame_id = map_frame_;
 	icp_odom_path_pub_.publish(icp_odom_path_);
 
-	if(verbosity_level_ >= 2)
+	if(verbosity_level_ >= 1)
 	{
 		std::cout << std::endl;
 		std::cout << "Initial position = " << getStringFromVector3d(icp_odom_poses_[0].pos) << std::endl;
@@ -246,44 +247,54 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		*prev_cloud_ = *curr_cloud_;
 		return;
 	}
+	
+	// Registration
+	// GICP is said to be better, but what about NICP from Serafin?
+	pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+	icp.setInputSource(curr_cloud_);
+	icp.setInputTarget(prev_cloud_);
+	icp.setMaximumIterations(ICP_MAX_ITERS);
+	icp.setTransformationEpsilon(ICP_EPSILON);
+	icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
+	icp.setRANSACIterations(0);
 
-	if(clouds_skipped_ >= num_clouds_skip_)
+	pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>()), unused_cloud(new pcl::PointCloud<pcl::PointXYZ>()), joint_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+	icp.align(*unused_cloud);
+	Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
+	
+	if(icp.hasConverged())
 	{
-		// Registration
-		// GICP is said to be better, but what about NICP from Serafin?
-		pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-		icp.setInputSource(curr_cloud_);
-		icp.setInputTarget(prev_cloud_);
-		icp.setMaximumIterations(ICP_MAX_ITERS);
-		icp.setTransformationEpsilon(ICP_EPSILON);
-		icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
-		icp.setRANSACIterations(0);
-
-		pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>()), unused_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-		icp.align(*unused_cloud);
-		Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
-		
-		if(icp.hasConverged())
+		// ROS_INFO("		ICP converged");
+		Eigen::Matrix4d T_inv = T.inverse();
+		pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
+		if(clouds_skipped_ >= num_clouds_skip_)
 		{
-			// ROS_INFO("		ICP converged");
 			updateICPOdometry(T);
 			new_transform_ = true;
-			Eigen::Matrix4d T_inv = T.inverse();
-			pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
-
-			if(verbosity_level_ >= 1)
-			{
-
-				publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
-				publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
-			}
+			*prev_cloud_ = *curr_cloud_;
+			clouds_skipped_ = 0;
 		}
-		*prev_cloud_ = *curr_cloud_;
-		clouds_skipped_ = 0;
+		else
+		{
+			if(aggregate_clouds_)
+			{
+				// TODO: Fix this. The transformation doesn't seem to be the correct one.
+				*joint_cloud = *unused_cloud + *aligned_cloud;
+				pcl::transformPointCloud(*joint_cloud, *joint_cloud, T);
+				pcl::VoxelGrid<pcl::PointXYZ> voxel_filter_joint;
+				voxel_filter_joint.setInputCloud(joint_cloud);
+				voxel_filter_joint.setLeafSize(0.2, 0.2, 0.2);
+				voxel_filter_joint.filter(*prev_cloud_);
+			}
+			clouds_skipped_++;
+		}
+
+		if(verbosity_level_ >= 1)
+		{
+			publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
+			publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
+		}
 	}
-	else
-	{
-		clouds_skipped_++;
-	}
+
 
 }
