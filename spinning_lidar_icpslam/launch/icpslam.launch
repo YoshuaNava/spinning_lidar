@@ -15,11 +15,12 @@
         <param name="icp_odom_path_topic" type="string" value="/icpslam/icp_odom_path" />
         <param name="true_path_topic" type="string" value="/icpslam/true_path" />
 
+
+        <param name="aggregate_clouds" type="bool" value="false" />
 		<param name="laser_cloud_topic" type="string" value="/front/cloud" />
-		<param name="num_clouds_skip" value="50" />
-		<!-- <param name="laser_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" /> -->
-		<!-- <param name="num_clouds_skip" value="1" /> -->
-		<param name="aggregate_clouds" type="bool" value="true" />
+		<param name="num_clouds_skip" value="10" />
+<!-- 		<param name="laser_cloud_topic" type="string" value="/spinning_lidar/assembled_cloud" />
+		<param name="num_clouds_skip" value="0" /> -->
         <param name="prev_cloud_topic" type="string" value="/icpslam/prev_cloud" />
         <param name="aligned_cloud_topic" type="string" value="/icpslam/aligned_cloud" />
         <param name="increment_cloud_topic" type="string" value="/icpslam/increment_cloud" />

@@ -258,15 +258,17 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 	icp.setMaxCorrespondenceDistance(ICP_MAX_CORR_DIST);
 	icp.setRANSACIterations(0);
 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_cloud(new pcl::PointCloud<pcl::PointXYZ>()), unused_cloud(new pcl::PointCloud<pcl::PointXYZ>()), joint_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-	icp.align(*unused_cloud);
+	pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_in_curr_frame(new pcl::PointCloud<pcl::PointXYZ>()),
+										curr_cloud_in_prev_frame(new pcl::PointCloud<pcl::PointXYZ>()),
+										joint_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+	icp.align(*curr_cloud_in_prev_frame);
 	Eigen::Matrix4d T = icp.getFinalTransformation().cast<double>();
 	
 	if(icp.hasConverged())
 	{
 		// ROS_INFO("		ICP converged");
 		Eigen::Matrix4d T_inv = T.inverse();
-		pcl::transformPointCloud(*prev_cloud_, *aligned_cloud, T_inv);
+		pcl::transformPointCloud(*prev_cloud_, *prev_cloud_in_curr_frame, T_inv);
 		if(clouds_skipped_ >= num_clouds_skip_)
 		{
 			updateICPOdometry(T);
@@ -278,12 +280,15 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		{
 			if(aggregate_clouds_)
 			{
-				// TODO: Fix this. The transformation doesn't seem to be the correct one.
-				*joint_cloud = *unused_cloud + *aligned_cloud;
+				// TODO: Test this. Is the transformation correct?.
+				// TODO: How about implementing this with TF? And save the cloud in the parent frame?
+				*joint_cloud = *prev_cloud_;
+				pcl::transformPointCloud(*joint_cloud, *joint_cloud, T_inv);
+				*joint_cloud += *curr_cloud_in_prev_frame;
 				pcl::transformPointCloud(*joint_cloud, *joint_cloud, T);
 				pcl::VoxelGrid<pcl::PointXYZ> voxel_filter_joint;
 				voxel_filter_joint.setInputCloud(joint_cloud);
-				voxel_filter_joint.setLeafSize(0.2, 0.2, 0.2);
+				voxel_filter_joint.setLeafSize(0.15, 0.15, 0.15);
 				voxel_filter_joint.filter(*prev_cloud_);
 			}
 			clouds_skipped_++;
@@ -292,7 +297,7 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		if(verbosity_level_ >= 1)
 		{
 			publishPointCloud(prev_cloud_, cloud_msg->header.frame_id, ros::Time().now(), &prev_cloud_pub_);
-			publishPointCloud(aligned_cloud, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
+			publishPointCloud(curr_cloud_in_prev_frame, cloud_msg->header.frame_id, ros::Time().now(), &aligned_cloud_pub_);
 		}
 	}
 

@@ -21,7 +21,8 @@ int main(int argc, char** argv)
 	int keyframes_window = 3;
 	unsigned int curr_vertex_key=0;
 	bool run_pose_optimization = false,
-		 new_transform = false;
+		 new_transform = false,
+		 is_keyframe = false;
 	long num_keyframes = 0,
 		 num_vertices = 0,
 		 iter = 0;
@@ -54,14 +55,14 @@ int main(int argc, char** argv)
 
 			if (new_transform)
 			{
-				bool is_keyframe = false;
+				is_keyframe = false;
 				if(Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH)
 				{
 					if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
 					{
-						is_keyframe = true;
 						ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
 						ROS_INFO("  Keyframe inserted! ID %d", curr_vertex_key+1);
+						is_keyframe = true;
 						num_keyframes++;
 						prev_keyframe_pose = icp_odom_pose;
 
@@ -78,13 +79,13 @@ int main(int argc, char** argv)
 					new_transform = false;
 				}
 			}
-			else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
-			{
-				ROS_INFO("  Odometry vertex inserted! ID %d", curr_vertex_key+1);
-				pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
-				num_vertices++;
-				prev_robot_odom_pose = robot_odom_pose;
-			}
+			// else if ((Pose6DOF::distanceEuclidean(robot_odom_pose, prev_robot_odom_pose) > VERTEX_DIST_THRESH) && (num_keyframes > 0))
+			// {
+			// 	ROS_INFO("  Odometry vertex inserted! ID %d", curr_vertex_key+1);
+			// 	pose_optimizer->addNewFactor(&cloud, robot_odom_transform, robot_odom_pose, &curr_vertex_key, false);
+			// 	num_vertices++;
+			// 	prev_robot_odom_pose = robot_odom_pose;
+			// }
 
 
 			if(run_pose_optimization)
