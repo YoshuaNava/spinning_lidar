@@ -178,9 +178,8 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		robot_odom_poses_.push_back(pose_debug);
 		if(verbosity_level_ >= 2)
 		{
-			std::cout << "Robot odometry transform: " << odom_latest_transform_.toStringQuat("   ");
-			std::cout << "Robot odometry says: " << pose_debug.toStringQuat("   ");
-			std::cout << "In map, robot odometry says: " << pose_in_map.toStringQuat("   ");
+			std::cout << "Robot odometry pose:\n" << pose_debug.toStringQuat("   ");
+			std::cout << "Robot odometry transform:\n" << odom_latest_transform_.toStringQuat("   ");
 			std::cout << std::endl;
 		}
 
@@ -198,10 +197,13 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 	}
 }
 
-void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
+bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
 	// ROS_INFO("ICP odometry update!");
 	Pose6DOF transform(T, ros::Time().now());
+	if(transform.norm() < 0.01)
+		return false;
+
 	icp_latest_transform_ = transform;
 
 	Pose6DOF prev_pose = getLatestPoseICPOdometry();
@@ -216,24 +218,19 @@ void ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 	if(verbosity_level_ >= 1)
 	{
-		std::cout << std::endl;
-		std::cout << "Initial position = " << getStringFromVector3d(icp_odom_poses_[0].pos) << std::endl;
-		std::cout << "Initial rotation = " << getStringFromQuaternion(icp_odom_poses_[0].rot) << std::endl;
-		std::cout << "Prev odometry position = " << getStringFromVector3d(prev_pose.pos) << std::endl;
-		std::cout << "Prev odometry rotation = " << getStringFromQuaternion(prev_pose.rot) << std::endl;
-		std::cout << "Cloud translation = " << getStringFromVector3d(transform.pos) << std::endl;
-		std::cout << "Cloud rotation = " << getStringFromQuaternion(transform.rot) << std::endl;
-		std::cout << "ICP odometry position = " << getStringFromVector3d(new_pose.pos) << std::endl;
-		std::cout << "ICP odometry rotation = " << getStringFromQuaternion(new_pose.rot) << std::endl;
+		// std::cout << std::endl;
+		std::cout << "Initial pose:\n" << icp_odom_poses_[0].toStringQuat("   ");
+		std::cout << "Prev odometry pose:\n" << prev_pose.toStringQuat("   ");
+		std::cout << "Cloud transform = " << transform.toStringQuat("   ");
+		std::cout << "ICP odometry pose = " << new_pose.toStringQuat("   ");
 		std::cout << std::endl;
 	}
+
+	return true;
 }
 
 void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
-	if(!robot_odom_inited_) 
-		return;
-
 	// ROS_INFO("Cloud callback!");
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);

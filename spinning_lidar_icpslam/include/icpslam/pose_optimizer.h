@@ -43,10 +43,10 @@ protected:
 
     int verbosity_level_;
 
-    uint curr_vertex_key_, curr_edge_key_;
-    std::map<uint, PointCloud::Ptr> graph_scans_;
-    std::map<uint, Pose6DOF> graph_poses_;
-    std::map<uint, std::pair<uint, uint>> graph_edges_;
+    unsigned long curr_vertex_key_, curr_edge_key_;
+    std::map<unsigned long, PointCloud::Ptr> graph_scans_;
+    std::map<unsigned long, Pose6DOF> graph_poses_;
+    std::map<unsigned long, std::pair<unsigned long, unsigned long>> graph_edges_;
     Pose6DOF latest_pose;
     int pose_opt_iters;
 
@@ -80,19 +80,7 @@ public:
 
     virtual void init()=0;
 
-    // virtual void addNewKeyframeVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF icp_transform, Pose6DOF pose, uint *key)=0;
-
-    // virtual void addNewOdometryVertex(PointCloud::Ptr *new_cloud_ptr, Pose6DOF pose, uint *key)=0;
-
-    // virtual void addNewEdge(Eigen::MatrixXd cov, uint vertex2_key, uint vertex1_key, uint *key)=0;
-
-    // virtual bool optimizeGraph()=0;
-
     virtual void refinePoseGraph()=0;
-
-    // virtual void refineVertices()=0;
-
-    // virtual void refineEdges()=0;
 
     virtual bool checkLoopClosure()=0;
 

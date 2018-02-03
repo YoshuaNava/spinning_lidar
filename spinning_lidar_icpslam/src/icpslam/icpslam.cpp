@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 	PoseOptimizerGTSAM* pose_optimizer = new PoseOptimizerGTSAM(nh);
 
 	int keyframes_window = 3;
-	unsigned int curr_vertex_key=0;
+	unsigned long curr_vertex_key=0;
 	bool run_pose_optimization = false,
 		 new_transform = false,
 		 is_keyframe = false;
@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 
 			if(num_vertices == 0)
 			{
-				ROS_INFO("Iteration %d", iter);
+				ROS_INFO("Iteration %lu", iter);
 				ROS_INFO("	Initial pose inserted");
 				pose_optimizer->setInitialPose(robot_odom_pose);
 				num_vertices++;
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 					if((Pose6DOF::distanceEuclidean(icp_odom_pose, prev_keyframe_pose) > KFS_DIST_THRESH) && (cloud->points.size()>0))
 					{
 						ROS_INFO("##### Number of keyframes = %lu", num_keyframes+1);
-						ROS_INFO("  Keyframe inserted! ID %d", curr_vertex_key+1);
+						ROS_INFO("  Keyframe inserted! ID %lu", curr_vertex_key+1);
 						is_keyframe = true;
 						num_keyframes++;
 						prev_keyframe_pose = icp_odom_pose;
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 					}
 					else 
 					{
-						ROS_INFO("  ICP vertex inserted! ID %d", curr_vertex_key+1);
+						ROS_INFO("  ICP vertex inserted! ID %lu", curr_vertex_key+1);
 					}
 					pose_optimizer->addNewFactor(&cloud, icp_transform, icp_odom_pose, &curr_vertex_key, is_keyframe);
 					num_vertices++;

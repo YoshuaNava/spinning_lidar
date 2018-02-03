@@ -90,7 +90,7 @@ void PoseOptimizerGTSAM::setInitialPose(Pose6DOF &initial_pose)
 
     std::cout << "Vertex " << curr_vertex_key_ << "\n" << initial_pose;
 
-    graph_poses_.insert(std::pair<uint, Pose6DOF>(curr_vertex_key_, initial_pose));
+    graph_poses_.insert(std::pair<unsigned long, Pose6DOF>(curr_vertex_key_, initial_pose));
     curr_vertex_key_++;
 }
 
@@ -128,16 +128,16 @@ void PoseOptimizerGTSAM::extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool i
 }
 
 
-void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, uint *key, bool is_keyframe)
+void PoseOptimizerGTSAM::addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, unsigned long *key, bool is_keyframe)
 {
     *key = curr_vertex_key_;
     this->extendGraph(transform, pose, is_keyframe);
 
-    std::pair<uint, uint> edge_keys(curr_vertex_key_-1, curr_vertex_key_);
-    graph_edges_.insert(std::pair<uint, std::pair<uint, uint>>(curr_edge_key_, edge_keys));
-    graph_poses_.insert(std::pair<uint, Pose6DOF>(curr_vertex_key_, pose));
+    std::pair<unsigned long, unsigned long> edge_keys(curr_vertex_key_-1, curr_vertex_key_);
+    graph_edges_.insert(std::pair<unsigned long, std::pair<unsigned long, unsigned long>>(curr_edge_key_, edge_keys));
+    graph_poses_.insert(std::pair<unsigned long, Pose6DOF>(curr_vertex_key_, pose));
     if(is_keyframe)
-      graph_scans_.insert(std::pair<uint, PointCloud::Ptr>(*key, *new_cloud_ptr));
+      graph_scans_.insert(std::pair<unsigned long, PointCloud::Ptr>(*key, *new_cloud_ptr));
 
     curr_vertex_key_++;
     curr_edge_key_++;
@@ -166,7 +166,7 @@ void PoseOptimizerGTSAM::refinePoseGraph()
 {
     for (const auto& value : graph_values_)
     {
-        const unsigned int key = value.key;
+        const unsigned long key = value.key;
         Pose6DOF v_pose = toPose6DOF(graph_values_.at<gtsam::Pose3>(key));
         graph_poses_.find(key)->second.pos = v_pose.pos;
         graph_poses_.find(key)->second.rot = v_pose.rot;

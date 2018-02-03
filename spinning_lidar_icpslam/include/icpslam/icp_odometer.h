@@ -88,7 +88,7 @@ public:
 
 	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
 
-	void updateICPOdometry(Eigen::Matrix4d T);
+	bool updateICPOdometry(Eigen::Matrix4d T);
 
 	void laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg);
 	

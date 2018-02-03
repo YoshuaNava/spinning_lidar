@@ -34,7 +34,7 @@ public:
 
     void extendGraph(Pose6DOF &transform, Pose6DOF &pose, bool is_keyframe);
 
-    void addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, uint *key, bool is_keyframe);
+    void addNewFactor(PointCloud::Ptr *new_cloud_ptr, Pose6DOF transform, Pose6DOF pose, unsigned long *key, bool is_keyframe);
 
     void refinePoseGraph();
 

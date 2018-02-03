@@ -79,6 +79,11 @@ public:
 		return (((this->pos - pose.pos).norm() < EQUALITY_THRESH) && (fabs(this->rot.dot(pose.rot)) < 1-EQUALITY_THRESH));
 	}
 
+	double norm()
+	{
+		return pos.norm();
+	}
+
 	friend std::ostream& operator <<(std::ostream& os, const Pose6DOF& pose)
 	{
 		os << pose.toStringQuat();
