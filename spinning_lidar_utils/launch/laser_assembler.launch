@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <launch> 
 
-    <node name="lidar_scan_filtering_node" pkg="spinning_lidar_icpslam" type="lidar_scan_filtering" output="screen" >
+    <node name="lidar_scan_filtering_node" pkg="spinning_lidar_utils" type="lidar_scan_filtering" output="screen" >
         <param name="min_dist_to_sensor" value="5.0" />
         <param name="laser_link" type="string" value="laser" />
         <param name="laser_scan_topic" type="string" value="spinning_lidar/scan" />
         <param name="filtered_scan_topic" type="string" value="spinning_lidar/filtered_scan" />
     </node>
 
-    <node name="interrupt_laser_assembler_node" pkg="spinning_lidar_icpslam" type="interrupt_laser_assembler" output="screen" >
+    <node name="interrupt_laser_assembler_node" pkg="spinning_lidar_utils" type="interrupt_laser_assembler" output="screen" >
     	<param name="ir_interrupt_topic" type="string" value="spinning_lidar/ir_interrupt" />
         <param name="assembled_cloud_topic" type="string" value="spinning_lidar/assembled_cloud" />
         <param name="assemble_service" type="string" value="assemble_scans2" />
@@ -19,7 +19,5 @@
         <param name="max_scans" type="int" value="400" />
         <param name="fixed_frame" type="string" value="base_link" />
     </node>
-
-	<!-- <node name="map_tf_broadcaster" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 map odom 100" /> -->
 
 </launch>
