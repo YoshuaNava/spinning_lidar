@@ -72,6 +72,7 @@ target_link_libraries(ROS_UTILS
 
 ## Build library from icpslam source files
 LIST(APPEND ICPSLAM_SOURCEFILES
+  src/icpslam/robot_odometer.cpp
   src/icpslam/icp_odometer.cpp
   src/icpslam/pose_optimizer_g2o.cpp
   src/icpslam/pose_optimizer_gtsam.cpp

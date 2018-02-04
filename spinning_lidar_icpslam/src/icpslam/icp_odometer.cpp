@@ -32,12 +32,11 @@ ICPOdometer::ICPOdometer(ros::NodeHandle nh) :
 	nh_(nh),
 	prev_cloud_(new pcl::PointCloud<pcl::PointXYZ>()), curr_cloud_(new pcl::PointCloud<pcl::PointXYZ>())
 {
-	robot_odom_inited_ = false;
+	odom_inited_ = false;
 	new_transform_ = false;
 	clouds_skipped_ = 0;
-	rodom_first_pose_.setIdentity();
-	odom_latest_transform_.setIdentity();
 	icp_latest_transform_.setIdentity();
+	icp_odom_poses_.push_back(Pose6DOF::getIdentity());
 	init();	
 }
 
@@ -62,8 +61,6 @@ void ICPOdometer::loadParameters()
 
 	// Input robot odometry and point cloud topics
 	nh_.param("laser_cloud_topic", laser_cloud_topic_, std::string("spinning_lidar/assembled_cloud"));
-	nh_.param("robot_odom_topic", robot_odom_topic_, std::string("/odometry/filtered"));
-	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
 	nh_.param("aggregate_clouds", aggregate_clouds_, false);
 	nh_.param("num_clouds_skip", num_clouds_skip_, 0);
@@ -76,46 +73,30 @@ void ICPOdometer::loadParameters()
 
 		nh_.param("icp_odom_topic", icp_odom_topic_, std::string("icpslam/odom"));
 		nh_.param("icp_odom_path_topic", icp_odom_path_topic_, std::string("icpslam/icp_odom_path"));
-
-		nh_.param("true_path_topic", true_path_topic_, std::string("icpslam/true_path"));
 	}
 }
 
 void ICPOdometer::advertisePublishers()
 {
-	robot_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(robot_odom_path_topic_, 1);
+	icp_odom_pub_ = nh_.advertise<nav_msgs::Odometry>(icp_odom_topic_, 1);
+	icp_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path_topic_, 1);
 	
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
 	{
 		prev_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(prev_cloud_topic_, 1);
 		aligned_cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(aligned_cloud_topic_, 1);
-
-		icp_odom_pub_ = nh_.advertise<nav_msgs::Odometry>(icp_odom_topic_, 1);
-		icp_odom_path_pub_ = nh_.advertise<nav_msgs::Path>(icp_odom_path_topic_, 1);
-		true_path_pub_ = nh_.advertise<nav_msgs::Path>(true_path_topic_, 1);
 	}
 }
 
 void ICPOdometer::registerSubscribers()
 {
-	robot_odometry_sub_ = nh_.subscribe(robot_odom_topic_, 5, &ICPOdometer::robotOdometryCallback, this);
 	laser_cloud_sub_ = nh_.subscribe(laser_cloud_topic_, 1, &ICPOdometer::laserCloudCallback, this);
 }
 
 bool ICPOdometer::isOdomReady()
 {
-	return robot_odom_inited_;
-}
-
-Pose6DOF ICPOdometer::getFirstPoseRobotOdometry()
-{
-	return robot_odom_poses_.front(); 
-}
-
-Pose6DOF ICPOdometer::getLatestPoseRobotOdometry() 
-{
-	return robot_odom_poses_.back(); 
+	return odom_inited_;
 }
 
 Pose6DOF ICPOdometer::getFirstPoseICPOdometry()
@@ -128,84 +109,19 @@ Pose6DOF ICPOdometer::getLatestPoseICPOdometry()
 	return icp_odom_poses_.back();
 }
 
-void ICPOdometer::getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, Pose6DOF *latest_odom_transform, Pose6DOF *odom_pose, bool *new_transform)
+void ICPOdometer::getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, bool *new_transform)
 {
 	**cloud = *prev_cloud_;
 	*latest_icp_transform = icp_latest_transform_;
-	*latest_odom_transform = odom_latest_transform_;
 
-	if(icp_odom_poses_.size() > 0)
-		*icp_pose = icp_odom_poses_.back();
-	else
-		*icp_pose = robot_odom_poses_.back();
+	*icp_pose = icp_odom_poses_.back();
 
-	*odom_pose = robot_odom_poses_.back();
 	*new_transform = new_transform_;
 
 	this->new_transform_ = false;
 }
 
 
-void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg)
-{
-	// ROS_INFO("Robot odometry callback!");
-	geometry_msgs::PoseWithCovariance pose_cov_msg = robot_odom_msg->pose;
-	Pose6DOF pose_in_odom(pose_cov_msg, robot_odom_msg->header.stamp),
-			 pose_in_map;
-
-	if(tf_listener_.canTransform(map_frame_, odom_frame_, ros::Time(0)))
-	{
-		pose_in_map = Pose6DOF::transformToFixedFrame(pose_in_odom, map_frame_, odom_frame_, &tf_listener_);
-		insertPoseInPath(pose_in_map.toROSPose(), map_frame_, robot_odom_msg->header.stamp, true_path_);
-		true_path_.header.stamp = ros::Time().now();
-		true_path_.header.frame_id = map_frame_;
-		true_path_pub_.publish(true_path_);
-		// if(clouds_skipped_ >= num_clouds_skip_)
-		// {
-		// 	std::cout << "Ground truth:\n" << pose_in_map.toStringQuat("   ");
-		// }
-	}
-	else
-	{
-		ROS_ERROR("Transform from odom to map frame not available");
-		return;
-	}
-
-	Pose6DOF pose_debug = pose_in_odom - rodom_first_pose_;
-	int num_poses = robot_odom_poses_.size();
-	if(num_poses == 0)
-	{
-		rodom_first_pose_ = pose_in_odom;
-		robot_odom_poses_.push_back(Pose6DOF::getIdentity());
-		icp_odom_poses_.push_back(Pose6DOF::getIdentity());
-		insertPoseInPath(Pose6DOF::getIdentity().toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
-		robot_odom_inited_ = true;
-	}
-	else
-	{
-		Pose6DOF prev_pose = getLatestPoseRobotOdometry();
-		odom_latest_transform_ = pose_debug - prev_pose;
-		robot_odom_poses_.push_back(pose_debug);
-		if(verbosity_level_ >= 2)
-		{
-			std::cout << "Robot odometry pose:\n" << pose_debug.toStringQuat("   ");
-			std::cout << "Robot odometry transform:\n" << odom_latest_transform_.toStringQuat("   ");
-			std::cout << std::endl;
-		}
-
-
-		Pose6DOF prev_pose_path(robot_odom_path_.poses[num_poses-1].pose); 
-    	if(Pose6DOF::distanceEuclidean(pose_debug, prev_pose_path) < POSE_DIST_THRESH) 
-		{
-			return;
-		}
-		insertPoseInPath(pose_debug.toROSPose(), map_frame_, robot_odom_msg->header.stamp, robot_odom_path_);
-		robot_odom_path_.header.stamp = ros::Time().now();
-		robot_odom_path_.header.frame_id = map_frame_;
-		robot_odom_path_pub_.publish(robot_odom_path_);
-
-	}
-}
 
 bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
@@ -229,6 +145,7 @@ bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 	if(verbosity_level_ >= 1)
 	{
+		std::cout << "#####		ICP odometry		#####" << std::endl;
 		std::cout << "Initial pose:\n" << getFirstPoseICPOdometry().toStringQuat("   ");
 		std::cout << "Prev odometry pose:\n" << prev_pose.toStringQuat("   ");
 		std::cout << "Cloud transform = " << transform.toStringQuat("   ");
@@ -283,6 +200,7 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 			bool success = updateICPOdometry(T);
 			if(success)
 			{
+				odom_inited_ = true;
 				*prev_cloud_ = *curr_cloud_;
 				clouds_skipped_ = 0;
 			}

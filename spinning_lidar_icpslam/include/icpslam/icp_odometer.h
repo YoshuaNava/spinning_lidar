@@ -27,7 +27,6 @@ class ICPOdometer
 {
 private:
 	// Constants
-	const double POSE_DIST_THRESH = 0.1;
 	const double ICP_FITNESS_THRESH = 0.1;
 	const double ICP_MAX_CORR_DIST = 1.0;
 	const double ICP_EPSILON = 1e-06;
@@ -35,32 +34,30 @@ private:
 
 	int verbosity_level_;
 
-	bool robot_odom_inited_;
+	bool odom_inited_;
 
 	// ROS node handle, URDF frames, topics and publishers
 	ros::NodeHandle nh_;
 	std::string laser_frame_, robot_frame_, odom_frame_, map_frame_;
-	std::string robot_odom_topic_, robot_odom_path_topic_, laser_cloud_topic_;
-	ros::Publisher robot_odom_path_pub_;
-	ros::Subscriber robot_odometry_sub_, laser_cloud_sub_;
+	std::string laser_cloud_topic_;
+	ros::Subscriber laser_cloud_sub_;
 
 	// Debug topics and publishers
-	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_, true_path_topic_;
-	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_, true_path_pub_;
+	std::string prev_cloud_topic_, aligned_cloud_topic_, icp_odom_topic_, icp_odom_path_topic_;
+	ros::Publisher prev_cloud_pub_, aligned_cloud_pub_, icp_odom_pub_, icp_odom_path_pub_;
 
 	// PCL clouds
 	pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_, curr_cloud_;
 
 	// Odometry path containers
-	nav_msgs::Path robot_odom_path_, icp_odom_path_, true_path_;
+	nav_msgs::Path icp_odom_path_;
 
 	// Translations and rotations estimated by ICP
 	bool new_transform_;
 	int clouds_skipped_, num_clouds_skip_;
 	bool aggregate_clouds_;
-	Pose6DOF rodom_first_pose_, icp_latest_transform_, odom_latest_transform_;
+	Pose6DOF icp_latest_transform_;
 	std::vector<Pose6DOF> icp_odom_poses_;
-	std::vector<Pose6DOF> robot_odom_poses_;
 	tf::TransformListener tf_listener_;
 	tf::TransformBroadcaster tf_broadcaster_;
 
@@ -78,17 +75,11 @@ public:
 
 	bool isOdomReady();
 
-	Pose6DOF getFirstPoseRobotOdometry();
-
- 	Pose6DOF getLatestPoseRobotOdometry(); 
-
 	Pose6DOF getFirstPoseICPOdometry();
 	
 	Pose6DOF getLatestPoseICPOdometry();
 
-	void getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, Pose6DOF *latest_odom_transform, Pose6DOF *odom_pose, bool *new_transform);
-
-	void robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robot_odom_msg);
+	void getEstimates(pcl::PointCloud<pcl::PointXYZ>::Ptr *cloud, Pose6DOF *latest_icp_transform, Pose6DOF *icp_pose, bool *new_transform);
 
 	bool updateICPOdometry(Eigen::Matrix4d T);
 
