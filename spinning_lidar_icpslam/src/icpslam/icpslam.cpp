@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 				prev_robot_odom_pose = robot_odom_pose;
 				continue;
 			}
-
+			
 			if (new_transform)
 			{
 				is_keyframe = false;
@@ -65,7 +65,6 @@ int main(int argc, char** argv)
 						is_keyframe = true;
 						num_keyframes++;
 						prev_keyframe_pose = icp_odom_pose;
-
 						if(num_keyframes % keyframes_window == 0)
 							run_pose_optimization = true;
 					}
@@ -94,7 +93,7 @@ int main(int argc, char** argv)
 				pose_optimizer->publishRefinedMap();
 				run_pose_optimization = false;	
 			}
-
+			
 			pose_optimizer->publishPoseGraphMarkers();
 
 			iter++;

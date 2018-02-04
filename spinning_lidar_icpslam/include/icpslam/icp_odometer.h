@@ -81,6 +81,8 @@ public:
 	Pose6DOF getFirstPoseRobotOdometry();
 
  	Pose6DOF getLatestPoseRobotOdometry(); 
+
+	Pose6DOF getFirstPoseICPOdometry();
 	
 	Pose6DOF getLatestPoseICPOdometry();
 

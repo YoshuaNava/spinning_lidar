@@ -34,6 +34,7 @@ ICPOdometer::ICPOdometer(ros::NodeHandle nh) :
 {
 	robot_odom_inited_ = false;
 	new_transform_ = false;
+	clouds_skipped_ = 0;
 	rodom_first_pose_.setIdentity();
 	odom_latest_transform_.setIdentity();
 	icp_latest_transform_.setIdentity();
@@ -65,7 +66,7 @@ void ICPOdometer::loadParameters()
 	nh_.param("robot_odom_path_topic", robot_odom_path_topic_, std::string("icpslam/robot_odom_path"));
 
 	nh_.param("aggregate_clouds", aggregate_clouds_, false);
-	nh_.param("num_clouds_skip", num_clouds_skip_, 10);
+	nh_.param("num_clouds_skip", num_clouds_skip_, 0);
 
 	// ICP odometry debug topics
 	if(verbosity_level_ >=1)
@@ -117,6 +118,11 @@ Pose6DOF ICPOdometer::getLatestPoseRobotOdometry()
 	return robot_odom_poses_.back(); 
 }
 
+Pose6DOF ICPOdometer::getFirstPoseICPOdometry()
+{
+	return icp_odom_poses_.front(); 
+}
+
 Pose6DOF ICPOdometer::getLatestPoseICPOdometry() 
 {
 	return icp_odom_poses_.back();
@@ -154,6 +160,10 @@ void ICPOdometer::robotOdometryCallback(const nav_msgs::Odometry::ConstPtr& robo
 		true_path_.header.stamp = ros::Time().now();
 		true_path_.header.frame_id = map_frame_;
 		true_path_pub_.publish(true_path_);
+		// if(clouds_skipped_ >= num_clouds_skip_)
+		// {
+		// 	std::cout << "Ground truth:\n" << pose_in_map.toStringQuat("   ");
+		// }
 	}
 	else
 	{
@@ -201,13 +211,14 @@ bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 {
 	// ROS_INFO("ICP odometry update!");
 	Pose6DOF transform(T, ros::Time().now());
-	if(transform.norm() < 0.01)
+	Pose6DOF prev_pose = getLatestPoseICPOdometry();
+	Pose6DOF new_pose = prev_pose + transform;
+
+	if(transform.norm() < 0.00001)
 		return false;
 
 	icp_latest_transform_ = transform;
-
-	Pose6DOF prev_pose = getLatestPoseICPOdometry();
-	Pose6DOF new_pose = prev_pose + transform;
+	new_transform_ = true;
 
 	icp_odom_poses_.push_back(new_pose);
 	publishOdometry(new_pose.pos, new_pose.rot, map_frame_, odom_frame_, ros::Time().now(), &icp_odom_pub_);
@@ -218,8 +229,7 @@ bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 
 	if(verbosity_level_ >= 1)
 	{
-		// std::cout << std::endl;
-		std::cout << "Initial pose:\n" << icp_odom_poses_[0].toStringQuat("   ");
+		std::cout << "Initial pose:\n" << getFirstPoseICPOdometry().toStringQuat("   ");
 		std::cout << "Prev odometry pose:\n" << prev_pose.toStringQuat("   ");
 		std::cout << "Cloud transform = " << transform.toStringQuat("   ");
 		std::cout << "ICP odometry pose = " << new_pose.toStringQuat("   ");
@@ -232,6 +242,8 @@ bool ICPOdometer::updateICPOdometry(Eigen::Matrix4d T)
 void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& cloud_msg)
 {
 	// ROS_INFO("Cloud callback!");
+	// std::clock_t start;
+	// start = std::clock();
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::fromROSMsg(*cloud_msg, *input_cloud);
 	pcl::VoxelGrid<pcl::PointXYZ> voxel_filter;
@@ -268,17 +280,19 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		pcl::transformPointCloud(*prev_cloud_, *prev_cloud_in_curr_frame, T_inv);
 		if(clouds_skipped_ >= num_clouds_skip_)
 		{
-			updateICPOdometry(T);
-			new_transform_ = true;
-			*prev_cloud_ = *curr_cloud_;
-			clouds_skipped_ = 0;
+			bool success = updateICPOdometry(T);
+			if(success)
+			{
+				*prev_cloud_ = *curr_cloud_;
+				clouds_skipped_ = 0;
+			}
 		}
 		else
 		{
 			if(aggregate_clouds_)
 			{
 				// TODO: Test this. Is the transformation correct?.
-				// TODO: How about implementing this with TF? And save the cloud in the parent frame?
+				// TODO: How about implementing cloud aggregation with TF, saving the joint cloud in the parent frame?
 				*joint_cloud = *prev_cloud_;
 				pcl::transformPointCloud(*joint_cloud, *joint_cloud, T_inv);
 				*joint_cloud += *curr_cloud_in_prev_frame;
@@ -298,5 +312,5 @@ void ICPOdometer::laserCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& c
 		}
 	}
 
-
+	// std::cout << "Time elapsed: " << (std::clock() - start) / (double)(CLOCKS_PER_SEC / 1000) << " ms" << std::endl;
 }
