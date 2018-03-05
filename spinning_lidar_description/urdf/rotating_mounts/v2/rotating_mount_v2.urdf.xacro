@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<robot name="rotating_mount_v2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.urdf.xacro" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v2/rotating_mount_v2.transmission.xacro" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v2/rotating_mount_v2.gazebo" />
+  <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
+
+  <xacro:property name="M_PI" value="3.14159265359"/>
+
+
+  <xacro:macro name="rotating_mount_v2_macro" params="parent imu_link mount_link axis_link lidar_link *origin">
+
+    <link name="${mount_link}_base_link" />
+
+    <joint name="laser_base_link_to_parent" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${mount_link}_base_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+
+    <link name="${mount_link}">
+      <xacro:inertial_cuboid mass="0.15" x_length="0.04" y_length="0.08" z_length="0.15" />
+      <collision name="collision">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.04 0.08 0.15"/>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.04 0.08 0.15"/>
+        </geometry>
+        <material name="Grey">
+          <color rgba="0.6 0.6 0.6 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <joint name="${mount_link}_base_link_to_mount" type="fixed">
+      <parent link="${mount_link}_base_link"/>
+      <child link="${mount_link}"/>
+      <axis xyz="0 0 0"/>
+      <origin xyz="0 0 0.075" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${imu_link}">
+      <xacro:inertial_cuboid mass="0.055" x_length="0.057" y_length="0.042" z_length="0.024" />
+      <collision name="collision">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.057 0.042 0.024"/>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0"/>
+        <geometry>
+          <mesh scale="0.001 0.001 0.001" filename="package://spinning_lidar_description/meshes/IMU/xsens-mti30.stl" />
+        </geometry>
+        <material name="Orange">
+          <color rgba="1.0 0.54 0 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <joint name="${mount_link}_to_${imu_link}" type="fixed">
+      <parent link="${mount_link}"/>
+      <child link="${imu_link}"/>
+      <axis xyz="0 0 0"/>
+      <origin xyz="-0.05 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${axis_link}">
+      <xacro:inertial_cuboid mass="0.1" x_length="0.4" y_length="0.8" z_length="1.5"/>
+      <visual name="visual">
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} 0"/>
+        <geometry>
+          <cylinder length="0.035" radius="0.02"/>
+        </geometry>
+        <material name="Grey">
+          <color rgba="0.6 0.6 0.6 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <joint name="lidar_spin_joint" type="continuous">
+      <origin xyz="0.035 0 0.06" rpy="0 0 0"/>
+      <axis xyz="1.0 0 0"/>
+      <parent link="${mount_link}"/>
+      <child link="${axis_link}"/>
+      <limit effort="1000" velocity="${2*M_PI}"/>
+      <joint_properties damping="0.0" />
+    </joint>
+
+    <xacro:hokuyo_ust_20lx_model name="${lidar_link}" />
+
+    <joint name="lidar_offset_joint" type="fixed">
+      <origin xyz="0.035 0 0.025" rpy="0 0 0"/>
+      <axis xyz="0 0 0"/>
+      <parent link="${axis_link}"/>
+      <child link="${lidar_link}"/>
+    </joint>
+    
+    <xacro:lidar_spin_joint_transmission />
+
+    <xacro:rotating_mount_v2_gazebo_macro imu_link="${imu_link}"/>
+
+  </xacro:macro>
+</robot>

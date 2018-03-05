@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<robot name="rotating_mount_v2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.gazebo.xacro" />
+
+  <xacro:macro name="rotating_mount_v2_gazebo_macro" params="imu_link">
+    <gazebo reference="laser_mount">
+      <material>Gazebo/DarkGrey</material>
+      <gravity>true</gravity>
+    </gazebo>
+    <gazebo reference="${imu_link}">
+      <material>Gazebo/Orange</material>
+      <gravity>true</gravity>
+    </gazebo>
+
+    <gazebo>
+      <plugin name="spinning_lidar_gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>/spinning_lidar</robotNamespace>
+      </plugin>
+        
+      <plugin name="imu_controller" filename="libhector_gazebo_ros_imu.so">
+        <robotNamespace>/spinning_lidar</robotNamespace>
+        <updateRate>400.0</updateRate>
+        <bodyName>${imu_link}</bodyName>
+        <topicName>imu/data</topicName>
+        <accelDrift>0.005 0.005 0.005</accelDrift>
+        <accelGaussianNoise>0.005 0.005 0.005</accelGaussianNoise>
+        <rateDrift>0.00005 0.00005 0.00005</rateDrift>
+        <rateGaussianNoise>0.00005 0.00005 0.00005</rateGaussianNoise>
+        <headingDrift>0.005</headingDrift>
+        <headingGaussianNoise>0.005</headingGaussianNoise>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+</robot>
+
+

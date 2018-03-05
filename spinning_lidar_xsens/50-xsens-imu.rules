@@ -1,0 +1,3 @@
+# UDEV Rules for Xsens MTi-30 5th generation IMU
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2639", ATTRS{idProduct}=="036820DC", ACTION=="add", GROUP="dialout", MODE="0660", SYMLINK+="xsens"

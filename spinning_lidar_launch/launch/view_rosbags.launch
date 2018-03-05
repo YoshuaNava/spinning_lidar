@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <launch>
 
-	<arg name="name" default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
+  <arg name="name" default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
 
-	<param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
+  <param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
 
-	<param name="use_gui" value="true" />
-	<node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor.rviz" />
+  <param name="use_gui" value="true" />
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor.rviz" />
 
 </launch>
