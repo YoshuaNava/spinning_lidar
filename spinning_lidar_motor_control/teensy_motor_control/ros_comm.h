@@ -97,9 +97,9 @@ inline void publish_motor_state(bool stopped, double curr_angle, double offset_a
 {
   motor_state_msg.header.stamp = nh.now();
   motor_state_msg.stopped = stopped;
-  motor_state_msg.curr_angle = -curr_angle;
-  motor_state_msg.offset_angle = -offset_angle;
-  motor_state_msg.curr_vel = -curr_vel;
+  motor_state_msg.curr_angle = curr_angle;
+  motor_state_msg.offset_angle = offset_angle;
+  motor_state_msg.curr_vel = curr_vel;
   motor_state_msg.des_vel = desired_vel;
   motor_state_pub.publish(&motor_state_msg);
 }
@@ -110,8 +110,8 @@ inline void publish_joint_states(double curr_angle, double curr_vel)
   joint_state_msg.header.stamp = nh.now();
 
   char* name[] = {(char*) SPINNING_JOINT};
-  float pos[] = {(float) -curr_angle};
-  float vel[] = {(float) -curr_vel};
+  float pos[] = {(float) curr_angle};
+  float vel[] = {(float) curr_vel};
   float eff[] = {0};
   joint_state_msg.name = name;
   joint_state_msg.position = pos;

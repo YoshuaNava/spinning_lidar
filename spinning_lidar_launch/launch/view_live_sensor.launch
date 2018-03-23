@@ -6,7 +6,7 @@
   <param name="robot_description" command="$(find xacro)/xacro $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
 
   <node name="lidar_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
-    <!-- <param name="rate" value="50.0"/> -->
+    <param name="rate" value="50.0"/>
     <rosparam param="source_list">["/spinning_lidar/joint_states"]</rosparam>
     <param name="use_gui" value="false"/>
   </node>
@@ -14,7 +14,7 @@
   <node name="lidar_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
     <param name="publish_frequency" value="200.0"/>
     <param name="use_tf_static" value="true"/>
-    <param name="ignore_timestamp" value="true"/>
+    <param name="ignore_timestamp" value="false"/>
   </node>
 
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor_loam.rviz" />

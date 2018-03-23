@@ -1,14 +1,15 @@
 <?xml version="1.0"?>
 <launch> 
 
-  <node name="lidar_scan_filtering_node" pkg="spinning_lidar_utils" type="lidar_scan_filtering" output="screen" >
-    <param name="min_dist_to_sensor" value="5.0" />
+  <node name="lidar_scan_filtering_node" pkg="spinning_lidar_utils" type="lidar_scan_filtering" output="screen">
+    <param name="min_dist_to_sensor" value="0.5" />
     <param name="laser_link" type="string" value="laser" />
     <param name="laser_scan_topic" type="string" value="spinning_lidar/scan" />
     <param name="filtered_scan_topic" type="string" value="spinning_lidar/filtered_scan" />
+    <param name="filtered_cloud_topic" type="string" value="spinning_lidar/filtered_cloud" />
   </node>
 
-  <node name="interrupt_laser_assembler_node" pkg="spinning_lidar_utils" type="interrupt_laser_assembler" output="screen" >
+  <node name="interrupt_laser_assembler_node" pkg="spinning_lidar_utils" type="interrupt_laser_assembler" output="screen">
     <param name="ir_interrupt_topic" type="string" value="spinning_lidar/ir_interrupt" />
     <param name="assembled_cloud_topic" type="string" value="spinning_lidar/assembled_cloud" />
     <param name="assemble_service" type="string" value="assemble_scans2" />
@@ -18,6 +19,12 @@
     <remap from="scan" to="/spinning_lidar/filtered_scan"/>
     <param name="max_scans" type="int" value="400" />
     <param name="fixed_frame" type="string" value="laser_mount" />
+  </node>
+
+  <node name="lidar_scan_to_cloud_node" pkg="spinning_lidar_utils" type="lidar_scan_to_cloud" output="screen">
+    <param name="target_frame" type="string" value="laser_mount_base_link" />
+    <param name="laser_scan_topic" type="string" value="/spinning_lidar/filtered_scan" />
+    <param name="laser_cloud_topic" type="string" value="sync_scan_cloud_filtered2" />
   </node>
 
 </launch>

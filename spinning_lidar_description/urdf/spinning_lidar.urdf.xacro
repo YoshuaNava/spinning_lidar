@@ -4,13 +4,13 @@
   <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v1/rotating_mount_v1.urdf.xacro" />
   <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v2/rotating_mount_v2.urdf.xacro" />
 
-  <link name="world"/>
+  <link name="camera"/>
 
 <!--   <xacro:rotating_mount_v1_macro parent="world" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser">
       <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:rotating_mount_v1_macro> -->
 
-  <xacro:rotating_mount_v2_macro parent="world" imu_link="xsens" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser">
+  <xacro:rotating_mount_v2_macro parent="camera" imu_link="xsens" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser">
       <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:rotating_mount_v2_macro>
 

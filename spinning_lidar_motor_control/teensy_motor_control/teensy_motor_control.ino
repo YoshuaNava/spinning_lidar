@@ -7,7 +7,7 @@
 #include "ros_comm.h"
 
 /************************       Constants       ************************/
-const int MAIN_LOOP_FREQ = 40;
+const int MAIN_LOOP_FREQ = 80;
 const double MAIN_LOOP_DELAY = 1000000.0/MAIN_LOOP_FREQ;
 const long ZERO = 0;
 

@@ -42,7 +42,7 @@ private:
   tf::TransformListener tf_listener_;
   tf::MessageFilter<sensor_msgs::LaserScan> tf_laser_filter_;
   laser_geometry::LaserProjection laser_projector_;
-  double tf_filter_tol_ = 0.01;
+  double tf_filter_tol_ = 0.03;
   double min_dist_to_sensor_;
   float inf = std::numeric_limits<float>::infinity();
   
@@ -79,7 +79,7 @@ private:
     filtered_scan_pub_.publish(filtered_scan);
 
     // Projection of laser scans into point clouds
-      sensor_msgs::PointCloud2 cloud;
+    sensor_msgs::PointCloud2 cloud, cloud_mount;
     try
     {
       laser_projector_.transformLaserScanToPointCloud(laser_link_, filtered_scan, cloud, tf_listener_);
@@ -91,6 +91,7 @@ private:
     }
 
     cloud.header = scan->header;
+    cloud.header.frame_id = laser_link_;
     filtered_cloud_pub_.publish(cloud);
   }
 };
@@ -102,19 +103,21 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "lidar_scan_filtering");
   ros::NodeHandle nh;
+  ros::NodeHandle priv_nh("~");
 
 
   double min_dist_to_sensor;
   bool apply_voxel_filter;
   std::string laser_scan_topic, filtered_scan_topic, filtered_cloud_topic, laser_link;
-  ros::Publisher filtered_scan_pub;
 
-  nh.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
-  nh.param("laser_link", laser_link, std::string("laser"));
-  nh.param("laser_scan_topic", laser_scan_topic, std::string("spinning_lidar/scan"));
-  nh.param("filtered_scan_topic", filtered_scan_topic, std::string("spinning_lidar/filtered_scan"));
-  nh.param("filtered_cloud_topic", filtered_cloud_topic, std::string("spinning_lidar/filtered_cloud"));
-  nh.param("apply_voxel_filter", apply_voxel_filter, false);
+  priv_nh.param("min_dist_to_sensor", min_dist_to_sensor, 0.5);
+  priv_nh.param("laser_link", laser_link, std::string("laser"));
+  priv_nh.param("laser_scan_topic", laser_scan_topic, std::string("spinning_lidar/scan"));
+  priv_nh.param("filtered_scan_topic", filtered_scan_topic, std::string("spinning_lidar/filtered_scan"));
+  priv_nh.param("filtered_cloud_topic", filtered_cloud_topic, std::string("spinning_lidar/filtered_cloud"));
+  priv_nh.param("apply_voxel_filter", apply_voxel_filter, false);
+
+  ros::Duration(2.0).sleep();
 
   ROS_INFO("Dynamic (using TF) filtering of laser scans");
   DynamicLaserToPointCloud laser_pcl_converter(nh, laser_scan_topic, laser_link, filtered_scan_topic, filtered_cloud_topic, min_dist_to_sensor);

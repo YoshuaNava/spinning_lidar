@@ -3,5 +3,6 @@
 
   <include file="$(find spinning_lidar_motor_control)/launch/motor_control.launch"/>
   <include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
+  <include file="$(find spinning_lidar_imu)/launch/xsens_driver.launch"/>
 
 </launch>

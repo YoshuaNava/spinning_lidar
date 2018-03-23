@@ -5,7 +5,7 @@
 
   <rosparam file="$(find spinning_lidar_motor_control)/config/controllers.yaml" command="load" ns="spinning_lidar"/>
   <arg name="spin_joint_controllers" default="spin_joint_states
-                        spin_joint_vel_controller"/>
+                                              spin_joint_vel_controller"/>
 
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg spin_joint_controllers)" ns="spinning_lidar"/>
 
