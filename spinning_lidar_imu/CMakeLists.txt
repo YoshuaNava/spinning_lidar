@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(spinning_lidar_xsens)
+project(spinning_lidar_imu)
 
 
 find_package(catkin REQUIRED COMPONENTS
