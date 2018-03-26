@@ -5,5 +5,6 @@
 	<include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
   <include file="$(find spinning_lidar_imu)/launch/xsens_driver.launch"/>
 	<include file="$(find spinning_lidar_launch)/launch/view_live_sensor.launch"/>
+  <include file="$(find spinning_lidar_utils)/launch/loam_setup.launch"/>
 
 </launch>
