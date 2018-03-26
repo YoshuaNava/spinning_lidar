@@ -2,13 +2,13 @@
 <launch> 
   <node name="hokuyo_node" pkg="urg_node" type="urg_node">
     <param name="ip_address" value="192.168.0.10"/>
-      <param name="frame_id" value="laser"/>
-      <param name="publish_intensity" value="false"/>
-      <param name="publish_multiecho" value="false"/>
-      <remap from="scan" to="/spinning_lidar/scan" />
-      <remap from="laser_status" to="/spinning_lidar/laser_status" />
-      <!-- <param name="calibrate_time" value="true"/> -->
-      <!-- <param name="angle_min" value="-1.5707963"/> -->
-      <!-- <param name="angle_max" value="1.5707963"/> -->
+    <param name="frame_id" value="laser"/>
+    <param name="publish_intensity" value="false"/>
+    <param name="publish_multiecho" value="false"/>
+    <remap from="scan" to="/spinning_lidar/scan" />
+    <remap from="laser_status" to="/spinning_lidar/laser_status" />
+    <!-- <param name="calibrate_time" value="true"/> -->
+    <!-- <param name="angle_min" value="-1.5707963"/> -->
+    <!-- <param name="angle_max" value="1.5707963"/> -->
   </node>
 </launch>

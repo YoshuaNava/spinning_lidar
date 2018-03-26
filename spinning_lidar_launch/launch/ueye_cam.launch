@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch> 
+  <node name="camera_node" pkg="ueye" type="camera">
+    <param name="auto_gain" value="false"/>
+    <param name="hardware_gamma" value="false"/>
+    <param name="auto_exposure" value="false"/>
+    <param name="exposure_time" value="2"/>
+    <param name="pixel_clock" value="85"/>
+    <param name="frame_rate" value="20"/>
+    <param name="zoom" value="2.0"/>
+    <param name="color" value="0"/>
+    <!-- <param name="frame_id" value="camera"/> -->
+    <remap from="image_raw" to="image/raw"/>
+  </node>
+</launch>
