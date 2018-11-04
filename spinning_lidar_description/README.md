@@ -1,4 +1,4 @@
-# 3D_laser_reset_sensor_stand
+# spinning_lidar_description
 
 CAD models and URDF of the rotating sensor stand for 2D LIDAR designed at RPL (KTH).
 

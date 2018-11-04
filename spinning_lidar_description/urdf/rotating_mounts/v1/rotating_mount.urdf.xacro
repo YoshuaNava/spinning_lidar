@@ -1,14 +1,17 @@
 <?xml version="1.0"?>
-<robot name="rotating_mount_v1" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="rotating_mount" xmlns:xacro="http://www.ros.org/wiki/xacro">
   
   <xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.urdf.xacro" />
-  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v1/rotating_mount_v1.transmission.xacro" />
-  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v1/rotating_mount_v1.gazebo" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/rotating_mount.transmission.xacro" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v1/rotating_mount.gazebo" />
   <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
 
   <xacro:property name="M_PI" value="3.14159265359"/>
+  <material name="grey"><color rgba="0.6 0.6 0.6 1.0" /></material>
+  <material name="orange"><color rgba="1.0 0.54 0.0 1.0" /></material>
+  <material name="white"><color rgba="0.9 0.9 0.9 1.0" /></material>
 
-  <xacro:macro name="rotating_mount_v1_macro" params="parent mount_link axis_link lidar_link *origin">
+  <xacro:macro name="rotating_mount_macro" params="parent mount_link axis_link lidar_link gpu *origin">
 
     <link name="${mount_link}_base_link" />
 
@@ -31,9 +34,7 @@
         <geometry>
           <box size="0.04 0.08 0.15"/>
         </geometry>
-        <material name="Grey">
-          <color rgba="0.6 0.6 0.6 1"/>
-        </material>
+        <material name="grey" />
       </visual>
     </link>
 
@@ -51,9 +52,7 @@
         <geometry>
           <cylinder length="0.035" radius="0.02"/>
         </geometry>
-        <material name="Grey">
-          <color rgba="0.6 0.6 0.6 1"/>
-        </material>
+        <material name="grey" />
       </visual>
     </link>
 
@@ -66,7 +65,7 @@
       <joint_properties damping="0.0" />
     </joint>
 
-    <xacro:hokuyo_ust_20lx_model name="${lidar_link}" />
+    <xacro:hokuyo_ust_20lx_model name="${lidar_link}" gpu="${gpu}"/>
 
     <joint name="lidar_offset_joint" type="fixed">
       <origin xyz="0.035 0 0.025" rpy="0 0 0"/>
@@ -76,7 +75,7 @@
     </joint>
     
     <xacro:lidar_spin_joint_transmission />
+    <xacro:rotating_mount_gazebo_macro />
 
-    <xacro:rotating_mount_v1_gazebo_macro />
   </xacro:macro>
 </robot>

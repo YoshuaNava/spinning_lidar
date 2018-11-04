@@ -5,37 +5,34 @@
 	<xacro:property name="M_PI" value="3.1415926535897931" />
 	<xacro:property name="MAX_ANGLE_SWEEP" value="135.0" />
 
-	<xacro:macro name="hokuyo_ust_20lx_model" params="name">
-		<link name="${name}">
-			<xacro:inertial_cuboid mass="0.130" x_length="0.1" y_length="0.1" z_length="0.1"/>
-			<visual>
-				<origin xyz="0 0 0" rpy="0 0 0" />
-				<geometry>
-					<mesh filename="package://spinning_lidar_description/meshes/LIDAR/hokuyo_ust_10lx.stl" />
-				</geometry>
-		        <material name="Turquoise">
-                    <color rgba="0 1.0 1.0 1" />
-                </material>
-			</visual>
-			<collision>
-				<origin xyz="0 0 -0.0115" rpy="0 0 0" />
-				<geometry>
-					<box size="0.050 0.050 0.070" />
-				<!-- <mesh filename="package://spinning_lidar_description/meshes/LIDAR/hokuyo_ust_10lx.stl"/> -->
-				</geometry>
-			</collision>
-		</link>
+  <xacro:macro name="hokuyo_ust_20lx_model" params="name gpu">
+    <link name="${name}">
+      <xacro:inertial_cuboid mass="0.130" x_length="0.1" y_length="0.1" z_length="0.1"/>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://spinning_lidar_description/meshes/LIDAR/hokuyo_ust_10lx.stl" />
+        </geometry>
+        <material name="Black">
+          <color rgba="0.0 0.0 0.0 1" />
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.0115" rpy="0 0 0" />
+        <geometry>
+          <box size="0.050 0.050 0.070" />
+        </geometry>
+      </collision>
+    </link>
 
-
-
-		
-	    <!-- <xacro:hokuyo_ust_20lx_gazebo_gpu   name="hokuyo_ust_20lx_gazebo"  -->
-	    <xacro:hokuyo_ust_20lx_gazebo   name="hokuyo_ust_20lx_gazebo"
-		                                lidar_link="${lidar_link}" 
-		                                topic="spinning_lidar/scan" 
-		                                update_rate="40.0"
-		                                ray_count="1080"
-		                                min_angle="-${MAX_ANGLE_SWEEP}"
-		                                max_angle="${MAX_ANGLE_SWEEP}" />
-	</xacro:macro>
+    <!-- <xacro:hokuyo_ust_20lx_gazebo_gpu   name="hokuyo_ust_20lx_gazebo"  -->
+    <xacro:hokuyo_ust_20lx_gazebo   name="hokuyo_ust_20lx_gazebo"
+                                    lidar_link="${lidar_link}" 
+                                    topic="spinning_lidar/scan" 
+                                    update_rate="40.0"
+                                    ray_count="1080"
+                                    min_angle="-${MAX_ANGLE_SWEEP}"
+                                    max_angle="${MAX_ANGLE_SWEEP}"
+                                    gpu="${gpu}" />
+  </xacro:macro>
 </robot>
