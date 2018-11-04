@@ -10,7 +10,7 @@
 
     <gazebo>
       <plugin name="spinning_lidar_gazebo_ros_control" filename="libgazebo_ros_control.so">
-        <robotNamespace>/spinning_lidar</robotNamespace>
+        <robotNamespace>/</robotNamespace>
       </plugin>
     </gazebo>
   </xacro:macro>

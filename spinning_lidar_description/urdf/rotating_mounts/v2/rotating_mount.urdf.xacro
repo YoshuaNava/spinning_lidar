@@ -3,7 +3,8 @@
 
   <xacro:include filename="$(find spinning_lidar_description)/urdf/lidars/hokuyo_ust_20lx.urdf.xacro" />
   <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/rotating_mount.transmission.xacro" />
-  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v2/rotating_mount.gazebo" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/rotating_mount.gazebo" />
+  <xacro:include filename="$(find spinning_lidar_description)/urdf/rotating_mounts/v2/imu.gazebo" />
   <xacro:include filename="$(find hector_xacro_tools)/urdf/inertia_tensors.urdf.xacro" />
 
   <xacro:property name="M_PI" value="3.14159265359"/>
@@ -99,7 +100,8 @@
     </joint>
     
     <xacro:lidar_spin_joint_transmission />
-    <xacro:rotating_mount_gazebo_macro imu_link="${imu_link}"/>
+    <xacro:rotating_mount_gazebo_macro />
+    <xacro:imu_gazebo_macro imu_link="${imu_link}"/>
 
   </xacro:macro>
 </robot>

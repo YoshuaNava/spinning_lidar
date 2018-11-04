@@ -1,0 +1,3 @@
+scan:                   filtered_scan
+max_scans:              200
+fixed_frame:            laser_mount_base_link

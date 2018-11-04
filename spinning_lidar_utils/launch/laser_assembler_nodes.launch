@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<launch> 
+
+  <node name="laser_range_filter" pkg="spinning_lidar_utils" type="laser_range_filter" output="screen" ns="spinning_lidar">
+    <rosparam command="load"            file="$(find spinning_lidar_utils)/config/laser_range_filter.yaml"/>
+  </node>
+
+  <node name="ros_laser_assembler" pkg="laser_assembler" type="laser_scan_assembler" ns="spinning_lidar">
+    <rosparam command="load"            file="$(find spinning_lidar_utils)/config/ros_laser_assembler.yaml"/>
+  </node>
+
+  <node name="interrupt_laser_assembler" pkg="spinning_lidar_utils" type="interrupt_laser_assembler" output="screen" ns="spinning_lidar">
+    <rosparam command="load"            file="$(find spinning_lidar_utils)/config/interrupt_laser_assembler.yaml"/>
+  </node>
+
+  <node name="scan_to_cloud_converter" pkg="spinning_lidar_utils" type="scan_to_cloud_converter" output="screen" ns="spinning_lidar">
+    <rosparam command="load"            file="$(find spinning_lidar_utils)/config/scan_to_cloud_converter.yaml"/>
+  </node>
+
+</launch>

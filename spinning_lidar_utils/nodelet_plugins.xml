@@ -1,0 +1,19 @@
+<library path="lib/libspinning_lidar_utils_nodelets">
+  <class name="spinning_lidar_utils/LaserRangeFilterNodelet" type="spinning_lidar_utils::LaserRangeFilterNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for filtering laser scans by range.
+    </description>
+  </class>
+
+  <class name="spinning_lidar_utils/ScanToCloudConverterNodelet" type="spinning_lidar_utils::ScanToCloudConverterNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for converting a laser scan into a point cloud. It also transforms the point cloud to a target frame.
+    </description>
+  </class>
+
+  <class name="spinning_lidar_utils/InterruptLaserAssemblerNodelet" type="spinning_lidar_utils::InterruptLaserAssemblerNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for assembling laser scans after receiving an trigger message.
+    </description>
+  </class>
+</library>

@@ -1,0 +1,4 @@
+ir_interrupt_topic:     ir_interrupt
+assembled_cloud_topic:  assembled_cloud
+assemble_service:       assemble_scans2
+min_num_points:         5000

@@ -10,12 +10,6 @@
   <license>BSD</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>spinning_lidar_description</depend>
-  <depend>spinning_lidar_gazebo</depend>
-  <depend>spinning_lidar_imu</depend>
-  <depend>spinning_lidar_launch</depend>
-  <depend>spinning_lidar_motor_control</depend>
-  <depend>spinning_lidar_utils</depend>
   
   <export>
     <metapackage />

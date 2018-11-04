@@ -35,21 +35,17 @@ void IrInterruptPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   if (_sdf->HasElement("angle_tol")) {
     angle_tol_ = _sdf->GetElement("angle_tol")->Get<double>();
   }
-  connection_handler_ = event::Events::ConnectWorldUpdateBegin(
-      boost::bind(&IrInterruptPlugin::UpdateChild, this));
+  connection_handler_ = event::Events::ConnectWorldUpdateBegin(boost::bind(&IrInterruptPlugin::UpdateChild, this));
 
   if (!ros::isInitialized()) {
     int argc = 0;
     char** argv = NULL;
-    ros::init(
-        argc, argv, "ir_interrupt_plugin", ros::init_options::NoSigintHandler);
+    ros::init(argc, argv, "ir_interrupt_plugin", ros::init_options::NoSigintHandler);
   }
   nh_ptr_.reset(new ros::NodeHandle());
 
-  ir_interrupt_pub_ =
-      nh_ptr_->advertise<std_msgs::Empty>("spinning_lidar/ir_interrupt", 1);
-  spinning_lidar_joint_pub_ =
-      nh_ptr_->advertise<sensor_msgs::JointState>("joint_states", 1);
+  ir_interrupt_pub_ = nh_ptr_->advertise<std_msgs::Empty>("spinning_lidar/ir_interrupt", 1);
+  spinning_lidar_joint_pub_ = nh_ptr_->advertise<sensor_msgs::JointState>("joint_states", 1);
   recent_interrupt_ = true;
 }
 
@@ -87,7 +83,7 @@ void IrInterruptPlugin::UpdateChild() {
 
   sensor_msgs::JointState joint_state_msg;
   joint_state_msg.header.stamp = ros::Time::now();
-  joint_state_msg.header.frame_id = "laser_mount";
+  joint_state_msg.header.frame_id = frame_id_;
   joint_state_msg.name.push_back(joint_name_);
   joint_state_msg.position.push_back(angle);
   joint_state_msg.velocity.push_back(omega);

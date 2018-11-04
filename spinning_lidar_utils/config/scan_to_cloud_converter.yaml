@@ -1,0 +1,3 @@
+target_frame:           laser_mount_base_link
+laser_scan_topic:       scan
+laser_cloud_topic:      filtered_cloud

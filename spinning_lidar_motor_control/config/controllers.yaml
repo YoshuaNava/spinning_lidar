@@ -1,10 +1,10 @@
 # Publish all joint states -----------------------------------
-spin_joint_states:
+spinning_lidar_joint_states:
   type: joint_state_controller/JointStateController
   publish_rate: 200
 
 
-spin_joint_vel_controller:
+spinning_lidar_joint_vel_controller:
   type: "velocity_controllers/JointVelocityController"
   joint: lidar_spin_joint
   pid: {p: 1.0, i: 0.0, d: 0.0}

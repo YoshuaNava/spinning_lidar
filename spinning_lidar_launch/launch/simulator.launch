@@ -11,7 +11,7 @@
 
   <include file="$(find spinning_lidar_motor_control)/launch/ros_control.launch"/>
   <include file="$(find spinning_lidar_description)/launch/description.launch"/>
-  <include file="$(find spinning_lidar_utils)/launch/laser_assembler.launch"/>
+  <!-- <include file="$(find spinning_lidar_utils)/launch/laser_assembler.launch"/> -->
 
   <!-- Launch Gazebo with the specified world -->
   <include file="$(find gazebo_ros)/launch/empty_world.launch">

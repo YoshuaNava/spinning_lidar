@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch> 
+
+  <group ns="spinning_lidar">
+    <node name="nodelet_manager" pkg="nodelet" type="nodelet" args="manager" output="screen"/>
+
+    <node pkg="nodelet" type="nodelet" name="laser_range_filter" args="load spinning_lidar_utils/LaserRangeFilterNodelet nodelet_manager" output="screen">
+      <rosparam command="load"            file="$(find spinning_lidar_utils)/config/laser_range_filter.yaml"/>
+    </node>
+
+    <node name="ros_laser_assembler" pkg="laser_assembler" type="laser_scan_assembler">
+      <rosparam command="load"            file="$(find spinning_lidar_utils)/config/ros_laser_assembler.yaml"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="interrupt_laser_assembler" args="load spinning_lidar_utils/InterruptLaserAssemblerNodelet nodelet_manager" output="screen">
+      <rosparam command="load"            file="$(find spinning_lidar_utils)/config/interrupt_laser_assembler.yaml"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="scan_to_cloud_converter" args="load spinning_lidar_utils/ScanToCloudConverterNodelet nodelet_manager" output="screen">
+      <rosparam command="load"            file="$(find spinning_lidar_utils)/config/scan_to_cloud_converter.yaml"/>
+    </node>
+  </group>
+
+</launch>

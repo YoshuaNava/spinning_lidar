@@ -1,0 +1,4 @@
+min_dist_to_sensor:     0.5
+max_dist_to_sensor:     30.0
+input_scan_topic:       scan
+output_scan_topic:      filtered_scan
