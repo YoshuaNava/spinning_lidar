@@ -1,5 +1,5 @@
 /***********************************************
-***       Alan Khudur, Yoshua Nava - KTH     ***
+***       Yoshua Nava, Alan Khudur - KTH     ***
 ************************************************/
 
 #include <math.h>

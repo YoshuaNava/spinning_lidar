@@ -6,8 +6,8 @@ CAD models and URDF of the rotating sensor stand for 2D LIDAR designed at RPL (K
 * *.stl can be used to load model in makerbot desktop application
  
 
- Credits: 
+ Credits:
+ * Yoshua Nava
  * Fredrik Ljungren 
  * Vladimir Li
  * Alan Khudur
- * Yoshua Nava

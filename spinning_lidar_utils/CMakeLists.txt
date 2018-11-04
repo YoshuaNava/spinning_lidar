@@ -9,22 +9,33 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -O3 -march=native")
 set(BUILD_TESTS FALSE)
 
 find_package(PCL REQUIRED)
-find_package(catkin REQUIRED COMPONENTS
-  cmake_modules
-  gazebo_msgs
-  laser_assembler
-  laser_geometry
-  message_filters
-  pcl_conversions
-  pcl_ros
-  roscpp
-  sensor_msgs
-  std_msgs
-  tf
+find_package(catkin REQUIRED
+  COMPONENTS
+    cmake_modules
+    gazebo_msgs
+    laser_assembler
+    laser_geometry
+    message_filters
+    pcl_conversions
+    pcl_ros
+    roscpp
+    sensor_msgs
+    std_msgs
+    tf
 )
 catkin_package(
   DEPENDS PCL
-  CATKIN_DEPENDS cmake_modules gazebo_msgs laser_assembler laser_geometry message_filters pcl_ros roscpp sensor_msgs std_msgs tf
+  CATKIN_DEPENDS
+    cmake_modules
+    gazebo_msgs
+    laser_assembler
+    laser_geometry
+    message_filters
+    pcl_ros
+    roscpp
+    sensor_msgs
+    std_msgs
+    tf
 )
 
 include_directories(

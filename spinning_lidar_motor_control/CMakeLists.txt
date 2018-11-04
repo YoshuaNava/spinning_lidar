@@ -3,7 +3,12 @@ project(spinning_lidar_motor_control)
 
 add_compile_options(-std=c++11)
 
-find_package(catkin REQUIRED COMPONENTS message_generation std_msgs tf)
+find_package(catkin REQUIRED
+  COMPONENTS
+    message_generation
+    std_msgs
+    tf
+)
 
 add_message_files(
   FILES
@@ -23,7 +28,8 @@ generate_messages(
 
 
 catkin_package(
-    DEPENDS tf
+    CATKIN_DEPENDS
+      tf
 )
 
 
