@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(find spinning_lidar_description)/urdf/spinning_lidar.urdf.xacro" />
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-urdf -model spinning_lidar -param robot_description"  respawn="false" output="screen"/>
+
+</launch>

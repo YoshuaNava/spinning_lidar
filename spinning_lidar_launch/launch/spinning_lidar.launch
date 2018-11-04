@@ -1,11 +1,10 @@
 <?xml version="1.0"?>
 <launch> 
 
-	<include file="$(find spinning_lidar_motor_control)/launch/motor_control.launch"/>
-	<include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
+  <include file="$(find spinning_lidar_motor_control)/launch/motor_control.launch"/>
+  <include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
   <include file="$(find spinning_lidar_imu)/launch/xsens_driver.launch"/>
   <include file="$(find spinning_lidar_launch)/launch/ueye_cam.launch"/>
-	<include file="$(find spinning_lidar_launch)/launch/view_live_sensor.launch"/>
-  <include file="$(find spinning_lidar_utils)/launch/loam_setup.launch"/>
+  <include file="$(find spinning_lidar_launch)/launch/view_live_sensor.launch"/>
 
 </launch>

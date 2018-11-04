@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="name" default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
+  <arg name="rviz_gui" default="true" />
+  <arg name="use_sim_time" default="true" />
+  <arg name="gazebo_gui" default="false" />
+  <arg name="gazebo_headless" default="false" />
+  <!-- <arg name="world_name" default="$(find spinning_lidar_gazebo)/worlds/square_room.world" /> -->
+  <arg name="world_name" default="$(find spinning_lidar_gazebo)/worlds/rpl_floor7_sketch.world" />
+
+  <include file="$(find spinning_lidar_motor_control)/launch/ros_control.launch"/>
+  <include file="$(find spinning_lidar_description)/launch/description.launch"/>
+  <include file="$(find spinning_lidar_utils)/launch/laser_assembler.launch"/>
+
+  <!-- Launch Gazebo with the specified world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)" />
+    <arg name="gui" value="$(arg gazebo_gui)" />
+    <arg name="headless" value="$(arg gazebo_headless)" />
+    <arg name="debug" value="false" />
+    <arg name="world_name" value="$(arg world_name)" />
+  </include>
+
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" > 
+      <param name="publish_frequency" value="200.0"/>
+      <param name="use_tf_static" value="true"/>
+      <param name="ignore_timestamp" value="true"/>
+  </node>
+
+  <group if="$(arg rviz_gui)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/live_sensor.rviz" />
+  </group>
+
+</launch>

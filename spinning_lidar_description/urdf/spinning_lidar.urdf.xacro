@@ -9,9 +9,9 @@
   <xacro:property name="gpu" value="$(arg gpu)" />
 
   <!-- Robot tree construction -->
-  <link name="camera"/>
+  <link name="world"/>
 
-  <xacro:rotating_mount_macro parent="camera" imu_link="xsens" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser" gpu="${gpu}">
+  <xacro:rotating_mount_macro parent="world" imu_link="xsens" mount_link="laser_mount" axis_link="laser_axis" lidar_link="laser" gpu="${gpu}">
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:rotating_mount_macro>
 

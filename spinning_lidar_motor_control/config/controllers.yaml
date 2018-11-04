@@ -7,3 +7,4 @@ spin_joint_states:
 spin_joint_vel_controller:
   type: "velocity_controllers/JointVelocityController"
   joint: lidar_spin_joint
+  pid: {p: 1.0, i: 0.0, d: 0.0}
