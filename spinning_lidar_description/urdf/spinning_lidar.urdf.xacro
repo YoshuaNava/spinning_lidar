@@ -15,4 +15,10 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
   </xacro:rotating_mount_macro>
 
+  <gazebo>
+    <plugin name="spinning_lidar_gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/</robotNamespace>
+    </plugin>
+  </gazebo>
+
 </robot>

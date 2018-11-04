@@ -74,9 +74,3 @@ add_executable(interrupt_laser_assembler src/interrupt_laser_assembler_node.cpp)
 target_link_libraries(interrupt_laser_assembler
   ${PROJECT_NAME}
 )
-
-
-if(BUILD_TESTS) 
-  add_executable(test_2d_cloud_gen_laserpipeline test/laser_pipeline/test_2d_cloud_gen_laserpipeline.cpp)
-  target_link_libraries(test_2d_cloud_gen_laserpipeline ${catkin_LIBRARIES})
-endif()

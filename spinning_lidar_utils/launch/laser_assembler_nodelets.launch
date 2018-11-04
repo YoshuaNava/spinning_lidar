@@ -10,6 +10,7 @@
 
     <node name="ros_laser_assembler" pkg="laser_assembler" type="laser_scan_assembler">
       <rosparam command="load"            file="$(find spinning_lidar_utils)/config/ros_laser_assembler.yaml"/>
+      <remap    from="scan"               to="filtered_scan"/>
     </node>
 
     <node pkg="nodelet" type="nodelet" name="interrupt_laser_assembler" args="load spinning_lidar_utils/InterruptLaserAssemblerNodelet nodelet_manager" output="screen">
