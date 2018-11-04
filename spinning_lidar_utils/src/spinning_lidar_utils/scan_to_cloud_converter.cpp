@@ -31,6 +31,10 @@ void ScanToCloudConverter::initRosTransport() {
 }
 
 void ScanToCloudConverter::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan) {
+  if (!output_cloud_pub_.getNumSubscribers()) {
+    return;
+  }
+
   // Projection of laser scans into point clouds
   sensor_msgs::PointCloud2 cloud;
   try {

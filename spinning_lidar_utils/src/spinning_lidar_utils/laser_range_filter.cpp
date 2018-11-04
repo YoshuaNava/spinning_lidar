@@ -23,6 +23,10 @@ void LaserRangeFilter::initRosTransport() {
 }
 
 void LaserRangeFilter::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan) {
+  if (!output_scan_pub_.getNumSubscribers()) {
+    return;
+  }
+  
   sensor_msgs::LaserScan filtered_scan;  // create new LaserScan msg for filtered points
 
   // LIDAR scan filtering

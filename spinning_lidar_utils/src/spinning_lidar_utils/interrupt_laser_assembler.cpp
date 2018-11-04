@@ -28,6 +28,10 @@ void InterruptLaserAssembler::initRosTransport() {
 }
 
 void InterruptLaserAssembler::irInterruptCallback(const std_msgs::Empty::ConstPtr& msg) {
+  if (!point_cloud_pub_.getNumSubscribers()) {
+    return;
+  }
+
   assemble_srv_.request.end = ros::Time::now();
   if (assemble_client_.call(assemble_srv_)) {
     size_t num_points = assemble_srv_.response.cloud.width;
