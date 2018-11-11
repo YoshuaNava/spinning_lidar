@@ -35,7 +35,7 @@ std_msgs::Empty empty_msg;
 sensor_msgs::JointState joint_state_msg;
 ros::Publisher motor_state_pub("spinning_lidar/motor_state", &motor_state_msg);
 ros::Publisher ir_interrupt_pub("spinning_lidar/ir_interrupt", &empty_msg);
-ros::Publisher joint_states_pub("spinning_lidar/joint_states", &joint_state_msg);
+ros::Publisher joint_states_pub("joint_states", &joint_state_msg);
 
 void motor_onoff_cb(const TurnMotorOnOff::Request &req, TurnMotorOnOff::Response &reply)
 {

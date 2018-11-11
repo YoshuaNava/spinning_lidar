@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="rviz_gui"                  default="true" />
+  <arg name="tf_publish_freq"           default="200.0" />
+
+  <!-- Joint state publisher -->
+<!--   <node name="lidar_joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" >
+    <param name="rate"                  value="$(arg tf_publish_freq)"/>
+    <param name="use_gui"               value="false"/>
+  </node> -->
+    
+  <!-- Robot state publisher -->
+  <node name="lidar_robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher">
+    <param name="publish_frequency"     value="$(arg tf_publish_freq)"/>
+    <param name="use_tf_static"         value="true"/>
+    <param name="ignore_timestamp"      value="false"/>
+  </node>
+
+  <!-- Rviz -->
+  <group if="$(arg rviz_gui)">
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find spinning_lidar_launch)/rviz/sensor.rviz" />
+  </group>
+
+</launch>

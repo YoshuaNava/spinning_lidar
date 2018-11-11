@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch> 
+
+  <arg name="name"                      default="spinning_lidar" doc="The robot name. Ensure this is the same name you give to the arm in the urdf instance."/>
+  <arg name="tf_publish_freq"           default="200.0" />
+  <arg name="rviz_gui"                  default="true" />
+
+  <!-- Robot description -->
+  <include file="$(find spinning_lidar_description)/launch/description.launch"/>
+
+  <!-- Sensor drivers -->
+  <include file="$(find spinning_lidar_launch)/launch/sensor_drivers.launch"/>
+
+  <!-- Laser assembling utils -->
+  <include file="$(find spinning_lidar_utils)/launch/laser_assembler_nodelets.launch"/>
+
+  <!-- Visualization -->
+  <include file="$(find spinning_lidar_launch)/launch/visualization.launch">
+    <param name="rviz_gui"              value="$(arg rviz_gui)"/>
+    <param name="tf_publish_freq"       value="$(arg tf_publish_freq)"/>
+  </include>
+
+</launch>

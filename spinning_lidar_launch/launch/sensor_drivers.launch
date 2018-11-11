@@ -1,8 +1,16 @@
 <?xml version="1.0"?>
 <launch> 
 
+	<!-- Spinning lidar motor controller -->
   <include file="$(find spinning_lidar_motor_control)/launch/motor_control.launch"/>
+
+  <!-- Hokuyo 2D lidar -->
   <include file="$(find spinning_lidar_launch)/launch/hokuyo_urg.launch"/>
+
+  <!-- XSens IMU -->
   <include file="$(find spinning_lidar_imu)/launch/xsens_driver.launch"/>
+
+  <!-- UEye USB camera -->
+  <include file="$(find spinning_lidar_launch)/launch/ueye_cam.launch"/>
 
 </launch>

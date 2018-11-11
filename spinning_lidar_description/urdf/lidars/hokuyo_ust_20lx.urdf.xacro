@@ -25,7 +25,6 @@
       </collision>
     </link>
 
-    <!-- <xacro:hokuyo_ust_20lx_gazebo_gpu   name="hokuyo_ust_20lx_gazebo"  -->
     <xacro:hokuyo_ust_20lx_gazebo   name="hokuyo_ust_20lx_gazebo"
                                     lidar_link="${lidar_link}" 
                                     topic="spinning_lidar/scan" 

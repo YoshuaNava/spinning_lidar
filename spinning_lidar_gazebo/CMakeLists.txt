@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5.2)
 project(spinning_lidar_gazebo)
 
 add_compile_options(-std=c++11)
-# set(CMAKE_CXX_FLAGS "-O3 -std=c++11")
+cmake_policy(SET CMP0045 NEW)
 set(CMAKE_BUILD_TYPE Release)
 
 find_package(gazebo REQUIRED)

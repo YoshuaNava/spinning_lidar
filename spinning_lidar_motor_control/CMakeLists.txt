@@ -12,28 +12,30 @@ find_package(catkin REQUIRED
 
 add_message_files(
   FILES
-  MotorState.msg
+    MotorState.msg
 )
 
 add_service_files(
   FILES
-  TurnMotorOnOff.srv
-  ChangeTargetVelocity.srv
+    TurnMotorOnOff.srv
+    ChangeTargetVelocity.srv
 )
 
 generate_messages(
   DEPENDENCIES
-  std_msgs 
+    std_msgs 
 )
 
 
 catkin_package(
-    CATKIN_DEPENDS
-      tf
+  CATKIN_DEPENDS
+    message_generation
+    std_msgs
+    tf
 )
 
 
 include_directories(
- ${catkin_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
 )
 

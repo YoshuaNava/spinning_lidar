@@ -6,4 +6,11 @@
                                               spinning_lidar_joint_vel_controller"/>
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="$(arg spin_joint_controllers)" />
 
+  <rosparam param="/gazebo_ros_control/pid_gains">
+    lidar_spin_joint:
+      p: 1
+      i: 0
+      d: 0
+  </rosparam>
+
 </launch>
